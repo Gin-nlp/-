@@ -1,0 +1,108 @@
+Perform tokenization (Whitespace, Punctuation-based, Treebank, Tweet, MWE) using NLTK
+library. Use porter stemmer and snowball stemmer for stemming. Use any technique for
+lemmatization.
+
+import nltk
+from nltk.tokenize import WhitespaceTokenizer, WordPunctTokenizer, TreebankWordTokenizer, TweetTokenizer, MWETokenizer
+from nltk.stem import PorterStemmer, SnowballStemmer
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+
+text = "The quick brown fox, named Mr. Fox, jumped over the lazy dogs! #fastfox @nature"
+
+whitespace_tokenizer = WhitespaceTokenizer()
+punctuation_tokenizer = WordPunctTokenizer()
+treebank_tokenizer = TreebankWordTokenizer()
+tweet_tokenizer = TweetTokenizer()
+mwe_tokenizer = MWETokenizer([('quick', 'brown'), ('lazy', 'dogs')])
+
+# Apply tokenization
+whitespace_tokens = whitespace_tokenizer.tokenize(text)
+punctuation_tokens = punctuation_tokenizer.tokenize(text)
+treebank_tokens = treebank_tokenizer.tokenize(text)
+tweet_tokens = tweet_tokenizer.tokenize(text)
+mwe_tokens = mwe_tokenizer.tokenize(text.split())
+
+# Stemming
+porter_stemmer = PorterStemmer()
+snowball_stemmer = SnowballStemmer("english")
+porter_stems = [porter_stemmer.stem(word) for word in punctuation_tokens]
+snowball_stems = [snowball_stemmer.stem(word) for word in punctuation_tokens]
+
+# Lemmatization
+lemmatizer = WordNetLemmatizer()
+lemmatized_words = [lemmatizer.lemmatize(word, wordnet.VERB) for word in punctuation_tokens]
+
+print("Whitespace Tokenization:", whitespace_tokens)
+print("Punctuation-based Tokenization:", punctuation_tokens)
+print("Treebank Tokenization:", treebank_tokens)
+print("Tweet Tokenization:", tweet_tokens)
+print("MWE Tokenization:", mwe_tokens)
+print("Porter Stemming:", porter_stems)
+print("Snowball Stemming:", snowball_stems)
+print("Lemmatization:", lemmatized_words)
+
+
+
+_______________________________________________________________________________________________________________
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+NLTK requires various data resources (like tokenization rules, lexicons, etc.) to perform its tasks. These lines download the necessary data:
+punkt: A pre-trained tokenizer model.
+wordnet: The WordNet lexical database, used for lemmatization and other tasks.
+omw-1.4: Open Multilingual Wordnet, an extension of WordNet.
+
+4. Initializing Tokenizers:
+whitespace_tokenizer = WhitespaceTokenizer()
+punctuation_tokenizer = WordPunctTokenizer()
+treebank_tokenizer = TreebankWordTokenizer()
+tweet_tokenizer = TweetTokenizer()
+mwe_tokenizer = MWETokenizer([('quick', 'brown'), ('lazy', 'dogs')])
+
+These lines create instances (objects) of each type of tokenizer.
+For MWETokenizer, we provide a list of tuples [('quick', 'brown'), ('lazy', 'dogs')]. This tells the tokenizer to treat "quick brown" and "lazy dogs" as single tokens if they appear consecutively.
+
+5. Applying Tokenization:
+# Apply tokenization
+whitespace_tokens = whitespace_tokenizer.tokenize(text)
+punctuation_tokens = punctuation_tokenizer.tokenize(text)
+treebank_tokens = treebank_tokenizer.tokenize(text)
+tweet_tokens = tweet_tokenizer.tokenize(text)
+mwe_tokens = mwe_tokenizer.tokenize(text.split())
+
+These lines apply the different tokenizers to the text and store the resulting lists of tokens in separate variables.
+.tokenize() is the method used by most NLTK tokenizers to perform the tokenization.
+Notice for MWETokenizer, we first split the text by whitespace using text.split() before passing it to the MWE tokenizer. This is because MWETokenizer works on a list of already separated words.
+
+6. Initializing Stemmers:
+# Stemming
+porter_stemmer = PorterStemmer()
+snowball_stemmer = SnowballStemmer("english")
+
+These lines create instances of the Porter and Snowball stemmers.
+For SnowballStemmer, we specify "english" as the language, as it supports multiple languages.
+
+7. Applying Stemming:
+porter_stems = [porter_stemmer.stem(word) for word in punctuation_tokens]
+snowball_stems = [snowball_stemmer.stem(word) for word in punctuation_tokens]
+
+Stemming is applied to each word in the punctuation_tokens list using a list comprehension.
+.stem(word) is the method used by stemmers to reduce a word to its root form (stem).
+Stemming is a cruder process than lemmatization; it often chops off the ends of words without considering if the result is a valid word. Its goal is to reduce words to a common base for analysis (e.g., "running," "runs," "ran" might all become "run").
+
+8. Initializing Lemmatizer:
+# Lemmatization
+lemmatizer = WordNetLemmatizer()
+This line creates an instance of the WordNetLemmatizer.
+
+9. Applying Lemmatization:
+lemmatized_words = [lemmatizer.lemmatize(word, wordnet.VERB) for word in punctuation_tokens]
+
+Lemmatization is applied to each word in the punctuation_tokens list using a list comprehension.
+.lemmatize(word, pos) is the method used by the lemmatizer. It attempts to find the base or dictionary form of a word (the lemma).
+The pos argument specifies the part-of-speech. Here, wordnet.VERB indicates that we want to lemmatize the words as if they were verbs. This is important because a word can have different lemmas depending on its part of speech (e.g., "running" as a verb vs. "running" as a noun). If no pos is provided, it defaults to noun (wordnet.NOUN). Lemmatization is generally more accurate than stemming as it uses a lexicon (like WordNet) to find the correct base form.
