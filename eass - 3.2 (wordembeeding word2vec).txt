@@ -1,0 +1,167 @@
+# Lab Assignment 6: Word Embeddings with word2vec
+# •	Train a word2vec model on a small corpus using Gensim.
+# •	Visualize word embeddings using t-SNE.
+# •	Find similar words using cosine similarity.
+
+# Step 1: Install required libraries
+# Reinstall compatible versions to avoid dtype mismatch
+!pip install numpy==1.23.5 --quiet
+!pip install --upgrade --force-reinstall gensim --quiet
+
+
+# Step 2: Import necessary modules
+import gensim
+from gensim.models import Word2Vec
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+import nltk
+from nltk.tokenize import word_tokenize, sent_tokenize
+import re
+
+
+# Step 3: Sample text corpus (you can replace it with your own)
+corpus = """
+Natural language processing enables machines to understand and interpret human language.
+It involves various tasks like sentiment analysis, named entity recognition, and machine translation.
+Deep learning has significantly improved NLP by using models like transformers and word embeddings.
+Word2Vec is an efficient model to learn vector representations of words based on context.
+"""
+
+
+# Step 4: Preprocess text
+nltk.download('punkt_tab')
+sentences = sent_tokenize(corpus.lower())
+tokenized_sentences = [word_tokenize(re.sub(r'[^\w\s]', '', sent)) for sent in sentences]
+
+
+# Step 5: Train Word2Vec model
+model = Word2Vec(sentences=tokenized_sentences, vector_size=100, window=5, min_count=1, workers=2, sg=1)  # sg=1 = skip-gram
+
+
+# Step 6: Explore vocabulary
+print("Vocabulary:", list(model.wv.key_to_index.keys()))
+
+
+# Step 7: Find similar words
+word = 'language'
+print(f"\nWords similar to '{word}':")
+print(model.wv.most_similar(word))
+
+
+# Step 8: Visualize embeddings using t-SNE
+import numpy as np
+def visualize_embeddings(model):
+    words = list(model.wv.key_to_index.keys())
+    word_vectors = [model.wv[word] for word in words]
+
+    tsne = TSNE(n_components=2, random_state=0)
+    reduced_vectors = np.array([model.wv[word] for word in words])
+
+    plt.figure(figsize=(10, 6))
+    for i, word in enumerate(words):
+        plt.scatter(reduced_vectors[i, 0], reduced_vectors[i, 1])
+        plt.annotate(word, xy=(reduced_vectors[i, 0], reduced_vectors[i, 1]))
+    plt.title("t-SNE Visualization of Word Embeddings")
+    plt.show()
+
+visualize_embeddings(model)
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+Purpose: Word2Vec models typically learn from sequences of words, like sentences. The text needs to be cleaned and structured into this format.
+nltk.download('punkt_tab'): Downloads data required by NLTK's tokenizers.
+sentences = sent_tokenize(corpus.lower()):
+corpus.lower(): Converts the entire corpus to lowercase to ensure that, e.g., "Language" and "language" are treated as the same word.
+sent_tokenize(...): Splits the lowercased text into a list of individual sentences. Word2Vec treats each sentence as an independent training example.
+tokenized_sentences = [word_tokenize(re.sub(r'[^\w\s]', '', sent)) for sent in sentences]: This is a list comprehension that further processes each sentence:
+re.sub(r'[^\w\s]', '', sent): Uses a regular expression to remove any characters that are not alphanumeric or whitespace (\w matches letters, numbers, underscore; \s matches whitespace; [^\w\s] matches anything not a word character or whitespace). This effectively removes punctuation like periods, commas, etc.
+word_tokenize(...): Splits the cleaned sentence string into a list of words.
+The result tokenized_sentences is a list of lists, where each inner list contains the tokens (words) of a sentence. This is the format Gensim's Word2Vec model expects.
+4. Train Word2Vec Model:
+
+Python
+
+# Step 5: Train Word2Vec model
+# Initialize and train the model using the preprocessed sentences
+model = Word2Vec(sentences=tokenized_sentences, # The list of tokenized sentences
+                 vector_size=100, # Dimensionality of the word vectors (embeddings)
+                 window=5, # Maximum distance between the current word and the predicted word within a sentence
+                 min_count=1, # Ignores all words with total frequency lower than this (1 means all words in this small corpus are included)
+                 workers=2, # Number of CPU threads to use for training
+                 sg=1) # Training algorithm: 1 for Skip-Gram, 0 for CBOW (default)
+Concept: Word Embeddings & Word2Vec: Word embeddings are dense vector representations of words. They aim to capture semantic and syntactic relationships so that words with similar meanings or that appear in similar contexts have similar vectors (are close to each other in a high-dimensional space). Word2Vec is a popular model for learning these embeddings by predicting words based on their context (Skip-Gram sg=1) or predicting a word given its context (CBOW sg=0).
+Word2Vec(...): Creates and trains the Word2Vec model.
+sentences: The preprocessed input data (list of lists of words).
+vector_size: The size of the resulting word vectors. Higher dimensions can capture more nuances but require more data. 100 is a common choice.
+window: Defines the "context window". For a target word, the model considers words within this distance to the left and right as its context.
+min_count: Filters words based on frequency. Words less frequent than min_count are not included in the model's vocabulary, and no vectors are learned for them.
+workers: Specifies how many threads to use for training, speeding up the process.
+sg: Selects the training algorithm. sg=1 uses Skip-Gram, which trains the model to predict context words given a target word.
+5. Explore Vocabulary and Find Similar Words:
+
+Python
+
+# Step 6: Explore vocabulary
+# Access the Word Vector (wv) object and list the learned words
+print("Vocabulary:", list(model.wv.key_to_index.keys()))
+
+# Step 7: Find similar words using cosine similarity
+word = 'language' # The target word to find similar words for
+print(f"\nWords similar to '{word}':")
+# Use the most_similar method to find words with vectors closest to the target word's vector
+print(model.wv.most_similar(word))
+Concept: Cosine Similarity: Cosine similarity is a measure of similarity between two non-zero vectors of an inner product space. It1 measures the cosine of the angle between2 them. If two vectors point in the exact same direction (angle is 0), their cosine similarity is 1. If they are orthogonal (angle is 90 degrees), similarity is 0. If they point in opposite directions (angle is 180 degrees), similarity is -1. In Word2Vec, words with similar meanings tend to have vectors that are close to each other and thus have high cosine similarity.   
+1.
+github.com
+github.com
+2.
+towardsdatascience.com
+towardsdatascience.com
+model.wv: After training, the model object contains a wv (Word Vectors) attribute. This wv object stores the learned word vectors and provides methods to query them.
+model.wv.key_to_index.keys(): Accesses the vocabulary learned by the model (the words for which vectors were trained).
+model.wv.most_similar(word): This method calculates the cosine similarity between the vector for the input word and the vectors of all other words in the vocabulary. It then returns a list of words sorted by similarity in descending order, along with their similarity scores.
+6. Visualize Embeddings using t-SNE:
+
+Python
+
+# Step 8: Visualize embeddings using t-SNE
+import numpy as np # Ensure numpy is imported (needed by TSNE and for array handling)
+
+def visualize_embeddings(model):
+    # Get the list of words and their high-dimensional vectors from the model
+    words = list(model.wv.key_to_index.keys())
+    word_vectors = [model.wv[word] for word in words] # Get the 100D vector for each word
+
+    # Initialize t-SNE: reduce to 2 dimensions for plotting
+    tsne = TSNE(n_components=2, random_state=0) # n_components=2 for 2D, random_state for reproducibility
+
+    # Apply t-SNE to reduce the dimensionality of the word vectors
+    # This is the crucial step transforming the 100D vectors to 2D points
+    reduced_vectors = tsne.fit_transform(word_vectors) # Use word_vectors directly
+
+    # Use numpy to handle the reduced vectors for plotting
+    reduced_vectors = np.array(reduced_vectors)
+
+    # Create a scatter plot
+    plt.figure(figsize=(10, 6)) # Set the figure size
+    for i, word in enumerate(words): # Iterate through each word and its corresponding 2D coordinates
+        plt.scatter(reduced_vectors[i, 0], reduced_vectors[i, 1]) # Plot a point at the 2D coordinates
+        plt.annotate(word, # Add the word text next to the point
+                     xy=(reduced_vectors[i, 0], reduced_vectors[i, 1]),
+                     xytext=(5, 2), # Offset the text slightly
+                     textcoords='offset points',
+                     ha='left', va='bottom')
+    plt.title("t-SNE Visualization of Word Embeddings") # Set the plot title
+    plt.show() # Display the plot
+
+# Call the visualization function
+visualize_embeddings(model)
+Concept: t-SNE for Visualization: Word embeddings are often in high dimensions (like 100). We cannot directly visualize 100 dimensions. t-SNE is a non-linear dimensionality reduction technique that is particularly good at preserving local structures (i.e., words that are close together in the high-dimensional space are likely to be close together in the 2D plot). It's commonly used to visualize relationships in embedding spaces.
+visualize_embeddings(model): This function takes the trained Word2Vec model.
+words = list(model.wv.key_to_index.keys()), word_vectors = [model.wv[word] for word in words]: Retrieves the list of words and their corresponding 100-dimensional vectors from the model.wv object.
+tsne = TSNE(n_components=2, random_state=0): Initializes the t-SNE algorithm instance, telling it to reduce the data to 2 dimensions (n_components=2). random_state is set to ensure that running the t-SNE algorithm multiple times on the same data produces the same result (t-SNE has a stochastic element).
+reduced_vectors = tsne.fit_transform(word_vectors): This is the core t-SNE step. It takes the list of high-dimensional word_vectors and applies the t-SNE algorithm to compute their corresponding 2-dimensional coordinates. The result reduced_vectors is a NumPy array where each row contains the [x, y] coordinates for a word.
+plt.figure(...), plt.scatter(...), plt.annotate(...), plt.title(...), plt.show(): These are standard matplotlib functions to create a scatter plot. It plots each word's 2D coordinates as a point and adds the word itself as a text label next to the point. The plot visually represents how words are positioned relative to each other in the learned embedding space after being squeezed into 2D. Words appearing closer on the plot are likely more similar in meaning or context based on the training data.

@@ -1,0 +1,178 @@
+# Lab Assignment 6: Word Sense Disambiguation using Lesk Algorithm
+# •	Implement the Lesk Algorithm for word sense disambiguation.
+# •	Take an ambiguous word (e.g., "bank") and disambiguate its meaning based on context.
+# •	Use WordNet for retrieving word definitions and related synsets.
+
+
+# Step 1: Install nltk and download WordNet data
+import nltk
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+nltk.download('punkt_tab')
+from nltk.corpus import wordnet as wn
+from nltk.tokenize import word_tokenize
+
+
+# Lesk Algorithm implementation
+def lesk_algorithm(context_sentence, ambiguous_word):
+    max_overlap = 0
+    best_sense = None
+    context = set(word_tokenize(context_sentence.lower()))
+
+    for sense in wn.synsets(ambiguous_word):
+        # Get definition and examples for the sense
+        signature = set(word_tokenize(sense.definition()))
+        for example in sense.examples():
+            signature.update(word_tokenize(example))
+
+        # Calculate overlap
+        overlap = len(context.intersection(signature))
+
+        if overlap > max_overlap:
+            max_overlap = overlap
+            best_sense = sense
+
+    return best_sense
+
+
+# Test sentences with the ambiguous word "bank"
+sentences = [
+    "He deposited cash in the bank",
+    "They sat on the river bank and had a picnic"
+]
+
+ambiguous_word = "bank"
+
+for sentence in sentences:
+    best_sense = lesk_algorithm(sentence, ambiguous_word)
+    print(f"Sentence: {sentence}")
+    if best_sense:
+        print(f"Predicted Sense: {best_sense.name()}")
+        print(f"Definition: {best_sense.definition()}\n")
+    else:
+        print("No suitable sense found.\n")
+
+
+# Test sentences with the ambiguous word "amazon"
+sentences = [
+    "Amazon is the largest service provider",
+    "Amazon is the longest river in the world"
+]
+
+ambiguous_word = "amazon"
+
+for sentence in sentences:
+    best_sense = lesk_algorithm(sentence, ambiguous_word)
+    print(f"Sentence: {sentence}")
+    if best_sense:
+        print(f"Predicted Sense: {best_sense.name()}")
+        print(f"Definition: {best_sense.definition()}\n")
+    else:
+        print("No suitable sense found.\n")
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+wordnet: The core English WordNet lexical database itself. This database contains nouns, verbs, adjectives, and adverbs organized into sets of cognitive synonyms (synsets), each expressing a distinct concept. Synsets include definitions and example sentences.
+omw-1.4: Data for the Open Multilingual WordNet, which extends WordNet to other languages (though primarily using English WordNet here).
+punkt_tab: Data for NLTK's sentence and word tokenizers.
+from nltk.corpus import wordnet as wn: Imports the WordNet corpus reader from NLTK and assigns it the shorter alias wn for convenience. This wn object allows you to access information within WordNet (like getting senses for a word).
+from nltk.tokenize import word_tokenize: Imports the function used to split text into words.
+2. Lesk Algorithm Implementation:
+
+Python
+
+# Lesk Algorithm implementation
+def lesk_algorithm(context_sentence, ambiguous_word):
+    max_overlap = 0 # Initialize variable to track the maximum overlap found so far
+    best_sense = None # Initialize variable to store the sense with the maximum overlap
+
+    # 1. Preprocess the context sentence: lowercase, tokenize, and convert to a set
+    # Using a set allows for fast intersection (finding common words)
+    context = set(word_tokenize(context_sentence.lower()))
+
+    # 2. Iterate through all possible senses (Synsets) of the ambiguous word from WordNet
+    for sense in wn.synsets(ambiguous_word):
+        # 3. Create a "signature" for the current sense:
+        #    Combine words from its definition and examples, tokenized and converted to a set
+        signature = set(word_tokenize(sense.definition())) # Start with definition words
+        for example in sense.examples(): # Add words from example sentences
+            signature.update(word_tokenize(example)) # Use update() to add words to the set
+
+        # 4. Calculate the overlap: number of words common to the context and the sense's signature
+        overlap = len(context.intersection(signature)) # Intersection of the two sets
+
+        # 5. Keep track of the sense with the highest overlap
+        if overlap > max_overlap:
+            max_overlap = overlap # Update max overlap
+            best_sense = sense # Update the best sense found so far
+
+    # 6. Return the sense that had the maximum overlap with the context
+    # If no senses were found for the word or no overlap occurred, best_sense will be None
+    return best_sense
+Concept: Word Sense Disambiguation (WSD): WSD is the task of identifying which sense (meaning) of a word is used in a sentence, given that the word has multiple senses. For example, "bank" can mean a financial institution or the side of a river.
+Concept: Lesk Algorithm: The Lesk algorithm is a dictionary-based WSD method. The basic idea is to compare the dictionary definition (and often example sentences) of each possible sense of an ambiguous word with the context in which the word appears. The sense whose definition/examples have the most words in common with the context is considered the most likely meaning.
+lesk_algorithm(context_sentence, ambiguous_word): This function takes the full sentence containing the ambiguous word (context_sentence) and the ambiguous_word itself.
+max_overlap = 0, best_sense = None: Variables to keep track of the best sense found during the process.
+context = set(word_tokenize(context_sentence.lower())): Preprocesses the input context_sentence. It converts it to lowercase, tokenizes it into words, and stores these words in a set. Using a set allows for very efficient checking of word overlap using set intersection.
+for sense in wn.synsets(ambiguous_word):: wn.synsets(ambiguous_word) queries WordNet and returns a list of Synset objects, where each Synset represents a distinct sense of the ambiguous_word. The loop iterates through each of these possible senses.
+Inside the loop (for each sense):
+signature = set(word_tokenize(sense.definition())): Gets the definition string for the current sense using sense.definition(), tokenizes it into words, and puts these words into a set called signature.
+for example in sense.examples(): signature.update(word_tokenize(example)): Gets any example sentences associated with the sense using sense.examples(). It tokenizes each example sentence and adds its words to the signature set using update(). The signature now contains words from both the definition and all examples for this sense.
+overlap = len(context.intersection(signature)): This is the core Lesk step. It finds the intersection of the context set (words in the input sentence) and the signature set (words in the sense's definition/examples). The len() of the resulting set is the number of words common to both – the overlap score.
+if overlap > max_overlap: ...: If the calculated overlap for the current sense is greater than the highest max_overlap found so far, this sense is considered the best_sense so far, and max_overlap is updated.
+return best_sense: After checking all senses in WordNet for the ambiguous_word, the function returns the Synset object (best_sense) that had the highest overlap score with the context sentence. If the word isn't in WordNet or no overlap (score of 0) was found for any sense, it returns None.
+3. Test the Algorithm:
+
+Python
+
+# Test sentences with the ambiguous word "bank"
+sentences_bank = [ # Renamed list variable for clarity
+    "He deposited cash in the bank",
+    "They sat on the river bank and had a picnic"
+]
+ambiguous_word_bank = "bank" # Renamed variable
+
+print("Testing with word:", ambiguous_word_bank)
+for sentence in sentences_bank: # Loop through bank sentences
+    best_sense = lesk_algorithm(sentence, ambiguous_word_bank) # Apply the algorithm
+    print(f"Sentence: {sentence}")
+    if best_sense: # If a sense was found (overlap > 0)
+        print(f"Predicted Sense: {best_sense.name()}") # Print the sense name (e.g., bank.n.01)
+        print(f"Definition: {best_sense.definition()}\n") # Print the sense definition
+    else:
+        print("No suitable sense found.\n")
+
+# Test sentences with the ambiguous word "amazon"
+sentences_amazon = [ # Renamed list variable for clarity
+    "Amazon is the largest service provider",
+    "Amazon is the longest river in the world"
+]
+ambiguous_word_amazon = "amazon" # Renamed variable
+
+print("\nTesting with word:", ambiguous_word_amazon)
+for sentence in sentences_amazon: # Loop through amazon sentences
+    best_sense = lesk_algorithm(sentence, ambiguous_word_amazon) # Apply the algorithm
+    print(f"Sentence: {sentence}")
+    if best_sense: # If a sense was found
+        print(f"Predicted Sense: {best_sense.name()}")
+        print(f"Definition: {best_sense.definition()}\n")
+    else:
+        print("No suitable sense found.\n")
+This part of the script demonstrates how to use the lesk_algorithm function.
+It defines lists of sentences containing the ambiguous word ("bank", then "amazon") in different contexts.
+It then loops through these sentences, calls lesk_algorithm for each sentence and the respective ambiguous word.
+Based on whether lesk_algorithm returns a Synset object (if best_sense: is True) or None, it prints the result: either the name and definition of the predicted sense or a message indicating no suitable sense was found.
+How it disambiguates "bank" and "amazon":
+
+"bank":
+Sentence 1: "He deposited cash in the bank". Context words might include {'he', 'deposited', 'cash', 'in', 'the', 'bank'}. WordNet senses for "bank" include financial institutions (with words like 'money', 'finance', 'deposit', 'account' in definitions/examples) and river banks (with words like 'river', 'side', 'slope', 'shore'). The words 'deposited' and 'cash' in the context are likely to overlap with the signature of the financial 'bank' sense more than the river 'bank' sense.
+Sentence 2: "They sat on the river bank and had a picnic". Context words might include {'they', 'sat', 'on', 'the', 'river', 'bank', 'and', 'had', 'a', 'picnic'}. The word 'river' in the context will strongly overlap with the signature of the river 'bank' sense, leading the algorithm to choose that sense.
+"amazon":
+Similarly, the algorithm compares the context words of each sentence ("service provider", "largest" in the first; "longest", "river", "world" in the second) with the definitions/examples of different WordNet senses for "amazon" (which might include the company, the river, a mythological female warrior, etc.) and picks the sense whose signature has the most shared words.
+Limitations of Basic Lesk:
+
+Sensitivity to Exact Word Matches: It only counts exact word overlaps. It doesn't understand synonyms or related concepts unless those exact words appear in both the context and the signature.
+Short Definitions/Examples: If WordNet's definitions or examples are very short or don't happen to use words that appear in the context, the overlap might be low or misleading.
+Ignores Word Importance: All words are treated equally. Common words (even after stop word removal) might contribute to overlap but aren't as informative as rarer, more specific words.

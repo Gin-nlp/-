@@ -1,0 +1,231 @@
+Perform text cleaning, perform lemmatization (any method), remove stop words (any method),
+label encoding. Create representations using TF-IDF. Save outputs
+
+import nltk
+import pandas as pd
+import numpy as np
+import re
+import string
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import LabelEncoder
+import pickle
+
+nltk.download("punkt")
+nltk.download("punkt_tab")
+nltk.download("stopwords")
+nltk.download("wordnet")
+
+data = {
+    "Text": [
+        "Natural Language Processing is amazing!",
+        "Deep Learning helps in text generation.",
+        "Machine Learning and AI are evolving fast!",
+        "This is an example sentence for NLP tasks.",
+        "TF-IDF is useful for text vectorization."
+    ],
+    "Label": ["NLP", "Deep Learning", "AI", "NLP", "TF-IDF"]
+}
+
+# Convert dataset into DataFrame
+df = pd.DataFrame(data)
+print("Original Data:\n", df)
+
+# text cleaning
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'\d+', '', text)
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+df["Cleaned_Text"] = df["Text"].apply(clean_text)
+
+
+# Tokenization
+df["Tokens"] = df["Cleaned_Text"].apply(word_tokenize)
+
+# Stop word
+stop_words = set(stopwords.words("english"))
+df["Filtered_Tokens"] = df["Tokens"].apply(lambda tokens: [word for word in tokens if word not in stop_words])
+
+# Lemmatization
+lemmatizer = WordNetLemmatizer()
+df["Lemmatized_Tokens"] = df["Filtered_Tokens"].apply(lambda tokens: [lemmatizer.lemmatize(word) for word in tokens])
+
+# Convert token lists back to text
+df["Processed_Text"] = df["Lemmatized_Tokens"].apply(lambda tokens: " ".join(tokens))
+
+# Label Encoding
+label_encoder = LabelEncoder()
+df["Encoded_Label"] = label_encoder.fit_transform(df["Label"])
+# TF-IDF Representation
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(df["Processed_Text"])
+
+
+# Convert TF-IDF matrix to DataFrame
+tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=vectorizer.get_feature_names_out())
+
+# Save the processed text and TF-IDF representations
+df.to_csv("processed_text.csv", index=False)
+tfidf_df.to_csv("tfidf_representation.csv", index=False)
+
+# Save the label encoder and vectorizer
+with open("label_encoder.pkl", "wb") as le_file:
+    pickle.dump(label_encoder, le_file)
+
+with open("tfidf_vectorizer.pkl", "wb") as vec_file:
+    pickle.dump(vectorizer, vec_file)
+
+
+# Display final processed DataFrame
+print("\nProcessed Data:\n", df)
+print("\nTF-IDF Representation:\n", tfidf_df)
+
+
+--------------------------------------------------------------------------------------------------------------
+Okay, let's break down this Python script. It demonstrates a standard workflow for preparing text data for machine learning tasks: cleaning, preprocessing (tokenization, stop word removal, lemmatization), feature extraction (TF-IDF), label encoding, and saving the results.
+
+1. Setup and Imports:
+import nltk
+import pandas as pd
+import numpy as np # Imported but not strictly used in this specific code execution path
+import re # Regular expressions for cleaning
+import string # To access punctuation characters
+
+from nltk.corpus import stopwords # To access stop words list
+from nltk.tokenize import word_tokenize # To split text into words
+from nltk.stem import WordNetLemmatizer # To perform lemmatization
+from sklearn.feature_extraction.text import TfidfVectorizer # For TF-IDF
+from sklearn.preprocessing import LabelEncoder # To encode text labels numerically
+import pickle # To save Python objects (like the encoder and vectorizer)
+
+# Download necessary NLTK data files
+nltk.download("punkt")
+nltk.download("punkt_tab") # Often included with punkt, but good to be explicit
+nltk.download("stopwords")
+nltk.download("wordnet") # Necessary for WordNetLemmatizer
+
+Libraries: Imports essential libraries:
+pandas for data manipulation using DataFrames.
+numpy for numerical operations (though less prominent in this specific example).
+re and string for text cleaning with regular expressions and punctuation access.
+Specific NLTK modules for stopwords, tokenization, and lemmatization.
+TfidfVectorizer and LabelEncoder from scikit-learn for feature extraction and label handling.
+pickle for saving Python objects to disk.
+NLTK Downloads: Downloads the required data resources for NLTK functions, such as the tokenizer models (punkt, punkt_tab), the list of common English "stopwords", and the WordNet lexicon used by the lemmatizer.
+
+2. Data Definition:
+data = {
+    "Text": [
+        "Natural Language Processing is amazing!",
+        "Deep Learning helps in text generation.",
+        "Machine Learning and AI are evolving fast!",
+        "This is an example sentence for NLP tasks.",
+        "TF-IDF is useful for text vectorization."
+    ],
+    "Label": ["NLP", "Deep Learning", "AI", "NLP", "TF-IDF"]
+}
+
+# Convert dataset into DataFrame
+df = pd.DataFrame(data)
+print("Original Data:\n", df)
+
+data: A Python dictionary holding the sample text data and their corresponding categories (labels).
+df = pd.DataFrame(data): Creates a pandas DataFrame from the dictionary, with columns named "Text" and "Label".
+print("Original Data:\n", df): Displays the initial DataFrame before any processing.
+
+3. Text Cleaning:
+# text cleaning
+def clean_text(text):
+    text = text.lower() # Convert to lowercase
+    text = re.sub(r'\d+', '', text) # Remove digits (e.g., '123' becomes '')
+    text = text.translate(str.maketrans('', '', string.punctuation)) # Remove punctuation
+    text = re.sub(r'\s+', ' ', text).strip() # Replace multiple spaces with single space and remove leading/trailing spaces
+    return text
+
+df["Cleaned_Text"] = df["Text"].apply(clean_text)
+Purpose: To standardize the text by removing noise like capitalization, digits, and punctuation, and handling inconsistent spacing. This ensures that, for example, "Amazing!", "amazing.", and "AMAZING" are all treated as the same word "amazing".
+clean_text(text) function: Defines the cleaning steps.
+text.lower(): Converts the entire string to lowercase.
+re.sub(r'\d+', '', text): Uses a regular expression to find and remove all sequences of digits (\d+).
+text.translate(str.maketrans('', '', string.punctuation)): This is an efficient way to remove all characters defined in string.punctuation (like !, ., ,, ', etc.). str.maketrans('', '', string.punctuation) creates a translation table mapping punctuation characters to None.
+re.sub(r'\s+', ' ', text).strip(): Uses a regular expression to replace one or more whitespace characters (\s+) with a single space (), and then .strip() removes any leading or trailing whitespace.
+df["Cleaned_Text"] = df["Text"].apply(clean_text): Applies the clean_text function to each entry in the original "Text" column and stores the results in a new column called "Cleaned_Text".
+
+4. Tokenization:
+# Tokenization
+df["Tokens"] = df["Cleaned_Text"].apply(word_tokenize)
+Purpose: To split the cleaned text into individual units (tokens), which are usually words.
+df["Tokens"] = df["Cleaned_Text"].apply(word_tokenize): Applies NLTK's word_tokenize function to each string in the "Cleaned_Text" column. This creates a new column "Tokens" where each entry is a list of the words (tokens) from the corresponding cleaned sentence.
+
+5. Stop Word Removal:
+# Stop word
+stop_words = set(stopwords.words("english")) # Load English stop words into a set for fast lookup
+df["Filtered_Tokens"] = df["Tokens"].apply(lambda tokens: [word for word in tokens if word not in stop_words])
+Purpose: To remove common words (like "is", "in", "and", "for") that often don't carry much meaning and might add noise to the data for tasks like classification.
+stop_words = set(stopwords.words("english")): Gets the standard list of English stopwords from NLTK and converts it into a set. Using a set allows for very fast checking (word not in stop_words).
+df["Filtered_Tokens"] = df["Tokens"].apply(...): Applies a lambda function to each list of tokens in the "Tokens" column. The lambda function is a list comprehension [word for word in tokens if word not in stop_words] that creates a new list containing only those words from the original tokens list that are not present in the stop_words set. The result is stored in the "Filtered_Tokens" column.
+
+6. Lemmatization:
+# Lemmatization
+lemmatizer = WordNetLemmatizer()
+df["Lemmatized_Tokens"] = df["Filtered_Tokens"].apply(lambda tokens: [lemmatizer.lemmatize(word) for word in tokens])
+Purpose: To reduce words to their base or dictionary form (the lemma). Unlike stemming, lemmatization uses a lexicon (like WordNet) and morphological analysis, so the resulting lemma is usually a valid word (e.g., "running" -> "run", "better" -> "good"). This helps group together different inflections of the same word.
+lemmatizer = WordNetLemmatizer(): Creates an instance of the WordNet Lemmatizer.
+df["Lemmatized_Tokens"] = df["Filtered_Tokens"].apply(...): Applies a lambda function to each list of Filtered_Tokens. The lambda function iterates through the tokens and applies lemmatizer.lemmatize(word) to each one. The result is stored in the "Lemmatized_Tokens" column. Note: By default, lemmatize assumes the word is a noun. For better accuracy, you would typically provide the Part-of-Speech (POS) tag (e.g., verb, adjective), but this code uses the default noun lemmatization.
+
+7. Convert Token Lists Back to Text:
+# Convert token lists back to text
+df["Processed_Text"] = df["Lemmatized_Tokens"].apply(lambda tokens: " ".join(tokens))
+Purpose: Most vectorizers (like TfidfVectorizer) expect input as strings, not lists of tokens. This step reconstructs the sentences from the processed token lists.
+df["Processed_Text"] = df["Lemmatized_Tokens"].apply(lambda tokens: " ".join(tokens)): For each list of Lemmatized_Tokens, it joins the words back into a single string with spaces between them using the .join() method. This creates the final "Processed_Text" column, which contains the cleaned, filtered, and lemmatized text strings ready for vectorization.
+
+8. Label Encoding:
+# Label Encoding
+label_encoder = LabelEncoder()
+df["Encoded_Label"] = label_encoder.fit_transform(df["Label"])
+Purpose: Machine learning algorithms typically work with numbers, not text labels. Label encoding converts the categorical text labels ("NLP", "Deep Learning", "AI", "TF-IDF") into numerical representations (e.g., 0, 1, 2, 3).
+label_encoder = LabelEncoder(): Creates an instance of the LabelEncoder.
+df["Encoded_Label"] = label_encoder.fit_transform(df["Label"]): This is a two-step process:
+fit(df["Label"]): The encoder learns the unique labels present in the "Label" column.
+transform(df["Label"]): It then converts each label into a unique integer based on the learned mapping. The result is stored in the "Encoded_Label" column.
+
+9. TF-IDF Representation:
+# TF-IDF Representation
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(df["Processed_Text"])
+
+# Convert TF-IDF matrix to DataFrame
+tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=vectorizer.get_feature_names_out())
+Purpose: To convert the processed text into numerical feature vectors using the TF-IDF (Term Frequency-Inverse Document Frequency) scheme. This method assigns weights to words based on how frequently they appear in a document (TF) and how rare they are across the entire dataset (IDF), highlighting words that are important and distinctive.
+vectorizer = TfidfVectorizer(): Creates an instance of the TfidfVectorizer.
+tfidf_matrix = vectorizer.fit_transform(df["Processed_Text"]): This step fits the vectorizer to the "Processed_Text" column (learns the vocabulary from the processed text and calculates the IDF values for each word) and then transforms the processed text into a TF-IDF matrix. The matrix is sparse (only non-zero values are stored) for efficiency.
+tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=vectorizer.get_feature_names_out()): Converts the sparse tfidf_matrix into a dense pandas DataFrame. The column names of this DataFrame are the vocabulary words learned by the vectorizer, and the values are the TF-IDF scores.
+
+10. Saving Outputs:
+# Save the processed text and TF-IDF representations
+df.to_csv("processed_text.csv", index=False)
+tfidf_df.to_csv("tfidf_representation.csv", index=False)
+
+# Save the label encoder and vectorizer
+with open("label_encoder.pkl", "wb") as le_file:
+    pickle.dump(label_encoder, le_file)
+
+with open("tfidf_vectorizer.pkl", "wb") as vec_file:
+    pickle.dump(vectorizer, vec_file)
+Purpose: To save the intermediate and final results to files so they can be loaded and used later without re-running the entire preprocessing pipeline.
+df.to_csv("processed_text.csv", index=False): Saves the main DataFrame df (which includes the original text, cleaned text, tokens, processed text, and encoded labels) to a CSV file named "processed_text.csv". index=False prevents pandas from writing the DataFrame index as a column in the CSV.
+tfidf_df.to_csv("tfidf_representation.csv", index=False): Saves the DataFrame containing the TF-IDF vectors to a CSV file named "tfidf_representation.csv".
+with open("label_encoder.pkl", "wb") as le_file: pickle.dump(label_encoder, le_file): This block saves the fitted LabelEncoder object to a file named "label_encoder.pkl". pickle.dump() serializes the Python object into a byte stream, and the "wb" mode opens the file for writing in binary mode. Saving the encoder is important because if you later want to predict the label for a new encoded number, you need the original encoder object to map the number back to the original text label (e.g., map 0 back to NLP).
+with open("tfidf_vectorizer.pkl", "wb") as vec_file: pickle.dump(vectorizer, vec_file): Similar to saving the encoder, this saves the fitted TfidfVectorizer object to "tfidf_vectorizer.pkl". This is crucial for processing new, unseen text data. You must use the same vectorizer that was fitted on your training data to transform new data to ensure it has the same vocabulary and dimensionality.
+
+11. Display Final Outputs:
+# Display final processed DataFrame
+print("\nProcessed Data:\n", df)
+print("\nTF-IDF Representation:\n", tfidf_df)
+Finally, the script prints the full DataFrame with all the new columns added during processing and the resulting TF-IDF DataFrame to the console for review.

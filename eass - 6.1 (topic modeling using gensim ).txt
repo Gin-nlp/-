@@ -1,0 +1,162 @@
+# Lab Assignment 5: Topic Modeling using Gensim
+# •	Use the Gensim library to implement Latent Dirichlet Allocation (LDA).
+# •	Train an LDA model on a dataset of news articles.
+# •	Extract and visualize the top words from each topic.
+
+
+# Install only necessary packages (without downgrades)
+!pip install gensim pyLDAvis nltk spacy --quiet
+!python -m spacy download en_core_web_sm
+
+
+import nltk
+import gensim
+import pyLDAvis
+import pyLDAvis.gensim_models as gensimvis
+import spacy
+import pandas as pd
+import re
+from nltk.corpus import stopwords
+from gensim import corpora
+from gensim.models.ldamodel import LdaModel
+nltk.download('stopwords')
+
+
+# Sample dataset (you can replace it with your own news article data)
+documents = [
+    "The economy is showing signs of recovery after the financial crisis.",
+    "Football teams are preparing for the upcoming world cup season.",
+    "The government announced a new policy on renewable energy.",
+    "Scientists have discovered a new species in the Amazon rainforest.",
+    "A major earthquake has struck the city, causing massive damage.",
+    "The stock market has hit a new high with tech companies leading.",
+    "New studies suggest eating vegetables can improve health.",
+    "Political tensions are rising between neighboring countries.",
+    "SpaceX launched another satellite into orbit successfully.",
+    "Healthcare workers are demanding better working conditions."
+]
+
+
+
+# Load Spacy model
+nlp = spacy.load("en_core_web_sm")
+stop_words = set(stopwords.words("english"))
+
+def preprocess(text):
+    doc = nlp(text.lower())  # Lowercase + tokenize with spacy
+    return [token.lemma_ for token in doc if token.is_alpha and token.text not in stop_words and len(token.text) > 2]
+
+processed_docs = [preprocess(doc) for doc in documents]
+
+
+# Create dictionary and corpus
+dictionary = corpora.Dictionary(processed_docs)
+corpus = [dictionary.doc2bow(doc) for doc in processed_docs]
+
+
+# Train LDA model
+lda_model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=3, random_state=42, passes=10)
+
+# Print the top words in each topic
+for idx, topic in lda_model.print_topics():
+    print(f"Topic #{idx}: {topic}")
+
+
+# Visualize the topics
+pyLDAvis.enable_notebook()
+vis = gensimvis.prepare(lda_model, corpus, dictionary)
+vis
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+3. Preprocessing:
+
+Python
+
+# Load Spacy model
+nlp = spacy.load("en_core_web_sm")
+stop_words = set(stopwords.words("english")) # Load English stop words into a set for efficient lookup
+
+# Preprocessing function
+def preprocess(text):
+    doc = nlp(text.lower()) # Process the text with spaCy after converting to lowercase
+    # Return a list of tokens (lemmas) that meet the criteria:
+    # - token.is_alpha: is it purely alphabetic? (removes punctuation, numbers)
+    # - token.text not in stop_words: is it not a stop word?
+    # - len(token.text) > 2: is the word length greater than 2 characters? (removes short words)
+    # - token.lemma_: get the base form (lemma) of the word
+    return [token.lemma_ for token in doc if token.is_alpha and token.text not in stop_words and len(token.text) > 2]
+
+# Apply preprocessing to all documents
+processed_docs = [preprocess(doc) for doc in documents]
+Purpose: Text preprocessing is crucial for topic modeling. It cleans the text and reduces words to their base forms so that variations of the same word (e.g., "run", "running", "ran") are treated as a single term.
+nlp = spacy.load("en_core_web_sm"): Loads the spaCy English model, which is used here for efficient tokenization and lemmatization.
+stop_words = set(stopwords.words("english")): Gets the standard English stop words list from NLTK and converts it into a set for fast lookup.
+preprocess(text) function:
+Takes a text string as input.
+nlp(text.lower()): Converts the text to lowercase and processes it using the spaCy pipeline. This automatically performs tokenization and lemmatization.
+[token.lemma_ for token in doc if ... ]: This list comprehension iterates through the tokens produced by spaCy. For each token, it checks several conditions:
+token.is_alpha: Ensures the token consists only of letters.
+token.text not in stop_words: Removes common stop words.
+len(token.text) > 2: Removes very short words (like "a", "is", "in" that might remain after stop word removal or are not meaningful).
+If a token meets all conditions, its lemma (token.lemma_) is added to the resulting list.
+processed_docs = [preprocess(doc) for doc in documents]: Applies the preprocess function to each document in the documents list, creating a new list processed_docs where each item is a list of cleaned and lemmatized tokens for that document.
+4. Create Dictionary and Corpus:
+
+Python
+
+# Create dictionary and corpus (Bag-of-Words representation)
+dictionary = corpora.Dictionary(processed_docs) # Create a mapping from words to unique integer IDs
+corpus = [dictionary.doc2bow(doc) for doc in processed_docs] # Convert each document into a Bag-of-Words vector
+Concept: Dictionary and Corpus in Gensim: Gensim's topic models work with a numerical representation of text.
+Dictionary: A mapping between each unique word in the entire collection of documents and a unique integer ID.
+Corpus: A list where each element represents a document. The document is represented as a list of (word_id, word_count) tuples. This is the Bag-of-Words (BoW) representation – it captures which words appear in a document and how often, but loses word order.
+dictionary = corpora.Dictionary(processed_docs): Creates a Dictionary object by scanning the processed_docs. It identifies all unique words and assigns an integer ID to each.
+corpus = [dictionary.doc2bow(doc) for doc in processed_docs]: Converts each list of tokens in processed_docs into its Bag-of-Words representation using the created dictionary. doc2bow ("document to bag-of-words") counts the frequency of each word (by its ID) in the document.
+5. Train LDA Model:
+
+Python
+
+# Train LDA model
+lda_model = LdaModel(corpus=corpus, # The Bag-of-Words corpus
+                     id2word=dictionary, # The dictionary mapping IDs back to words
+                     num_topics=3, # The number of topics we want to discover
+                     random_state=42, # Seed for reproducibility
+                     passes=10) # Number of passes through the corpus during training
+Concept: Latent Dirichlet Allocation (LDA): LDA is a generative statistical model that assumes each document is a mixture of a small number of topics, and each topic is a probability distribution over words. During training, LDA tries to figure out:
+What are the topics? (i.e., which words are likely to appear together in a topic?)
+What is the topic mixture for each document?
+LdaModel(...): Initializes and trains the LDA model.
+corpus: The input data in Gensim's BoW format.
+id2word: The dictionary is needed to map the word IDs in the corpus back to actual words when interpreting the topics.
+num_topics: This is a hyperparameter – the number of topics you want LDA to find. Choosing the optimal number of topics is often an iterative process. Here, 3 is chosen for simplicity with the small dataset.
+random_state: Setting a random state ensures that the model training is reproducible. LDA involves random initialization, so setting this makes the results consistent across runs.
+passes: The number of times the training algorithm iterates through the entire corpus. More passes can lead to better convergence but take longer.
+6. Print Top Words per Topic:
+
+Python
+
+# Print the top words in each topic
+for idx, topic in lda_model.print_topics():
+    print(f"Topic #{idx}: {topic}")
+lda_model.print_topics(): This method provides a human-readable summary of the discovered topics. For each topic, it lists the words that have the highest probability of appearing in that topic, along with their probabilities.
+The loop iterates through the output of print_topics(), where idx is the topic number (0, 1, 2, ...) and topic is a string listing the top words and their weights.
+7. Visualize Topics:
+
+Python
+
+# Visualize the topics using pyLDAvis
+pyLDAvis.enable_notebook() # Enable visualization in a notebook environment (like Colab/Jupyter)
+# Prepare the data for visualization
+vis = gensimvis.prepare(lda_model, corpus, dictionary)
+# Display the visualization (in a notebook)
+vis
+Concept: pyLDAvis Visualization: pyLDAvis is a powerful tool for interactively exploring LDA results. It provides:
+A 2D plot of the topics, where the distance between topic circles suggests how similar the topics are. The size of a topic circle reflects its prevalence in the corpus.
+A list of words for a selected topic, showing their overall frequency in the corpus and their estimated relevance to that specific topic.
+pyLDAvis.enable_notebook(): Configures pyLDAvis to render its output as interactive HTML directly within a notebook cell.
+gensimvis.prepare(lda_model, corpus, dictionary): This function takes the trained lda_model, the corpus (BoW representation), and the dictionary and prepares the data structure required by pyLDAvis for visualization.
+vis: The resulting object holds the visualization data. In a notebook environment, simply having the variable vis as the last line of a cell will cause the interactive visualization to be displayed.

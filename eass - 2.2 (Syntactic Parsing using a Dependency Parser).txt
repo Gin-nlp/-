@@ -1,0 +1,93 @@
+# Lab Assignment 4: Syntactic Parsing using a Dependency Parser
+# •	Load a dataset of sentences and perform dependency parsing using spaCy or StanfordNLP.
+# •	Visualize the syntactic structure using displaCy.
+# •	Analyze sentence structures and dependency relations.
+
+# Step 1: Install spaCy and download the English model
+!pip install -U spacy
+!python -m spacy download en_core_web_sm
+
+# Step 2: Import necessary libraries
+import spacy
+from spacy import displacy
+# Load the English NLP model
+nlp = spacy.load("en_core_web_sm")
+
+# Step 3: Sample dataset (can be extended or loaded from a file)
+sentences = [
+    "The quick brown fox jumps over the lazy dog.",
+    "Apple is looking at buying a startup in the UK.",
+    "Artificial Intelligence is transforming the world.",
+    "The boy who wore a red hat won the race.",
+    "She gave the book to her friend."
+]
+
+# Step 4: Perform dependency parsing and visualize using displaCy
+for i, sentence in enumerate(sentences):
+    doc = nlp(sentence)
+    print(f"\nSentence {i+1}: {sentence}")
+    print("Token\t→\tDependency\t→\tHead")
+    for token in doc:
+        print(f"{token.text}\t→\t{token.dep_}\t→\t{token.head.text}")
+
+    # Visualize the dependency structure
+    displacy.render(doc, style="dep", jupyter=True)
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+import spacy: Imports the main spaCy library.
+from spacy import displacy: Imports the displacy module, which is spaCy's built-in visualizer.
+nlp = spacy.load("en_core_web_sm"): Loads the downloaded spaCy model into the variable nlp. This nlp object is a processing pipeline that the text will be passed through. When you call nlp(text), spaCy will tokenize, tag, parse, etc., the text according to the components included in the loaded model.
+
+2. Sample Dataset:
+# Step 3: Sample dataset (can be extended or loaded from a file)
+sentences = [
+    "The quick brown fox jumps over the lazy dog.",
+    "Apple is looking at buying a startup in the UK.",
+    "Artificial Intelligence is transforming the world.",
+    "The boy who wore a red hat won the race.",
+    "She gave the book to her friend."
+]
+sentences: This is a list of sample text strings that the script will analyze using dependency parsing. These sentences are chosen to showcase different grammatical structures.
+
+3. Perform Dependency Parsing and Visualize:
+# Step 4: Perform dependency parsing and visualize using displaCy
+for i, sentence in enumerate(sentences): # Loop through each sentence in the list
+    doc = nlp(sentence) # Process the sentence using the spaCy model
+
+    print(f"\nSentence {i+1}: {sentence}")
+    print("Token\t→\tDependency\t→\tHead")
+    # Iterate through each token (word/punctuation) in the processed sentence
+    for token in doc:
+        # Print the token's text, its dependency relation, and the text of its head token
+        print(f"{token.text}\t→\t{token.dep_}\t→\t{token.head.text}")
+
+    # Visualize the dependency structure for the current sentence
+    # Renders the parse tree in HTML format, suitable for display in environments like Jupyter notebooks
+    displacy.render(doc, style="dep", jupyter=True)
+Concept: Syntactic Parsing (Dependency Parsing): Syntactic parsing is the process of analyzing a sentence according to grammatical rules to determine its structure. Dependency parsing is a type of syntactic parsing that focuses on the relationships between words. It identifies a head word for most words in a sentence, showing which word modifies or depends on which other word. These relationships are called dependency relations or dependency labels (e.g., 'nsubj' for nominal subject, 'dobj' for direct object, 'amod' for adjectival modifier). The result can be visualized as a tree structure.
+for i, sentence in enumerate(sentences):: This loop iterates through each sentence in the sentences list, providing both the index (i, starting from 0) and the sentence string itself.
+doc = nlp(sentence): This is the core step where spaCy does the heavy lifting. By passing the sentence string to the nlp object, spaCy runs its entire processing pipeline (including tokenization, POS tagging, and dependency parsing) on the text. The result is a Doc object, which holds all the processed information about the sentence.
+print(f"\nSentence {i+1}: {sentence}"): Prints the original sentence number and text for clarity.
+print("Token\t→\tDependency\t→\tHead"): Prints a header for the textual representation of the dependency relationships.
+for token in doc:: This loop iterates through each token object within the processed doc. spaCy automatically tokenized the sentence into tokens.
+print(f"{token.text}\t→\t{token.dep_}\t→\t{token.head.text}"): For each token:
+token.text: The actual word or punctuation mark.
+token.dep_: The dependency label (a string like 'nsubj', 'dobj', 'amod', 'ROOT') indicating the grammatical relationship between this token and its head.
+token.head.text: The text of the token's head. The head is the word that this token is grammatically attached to or modifies. For example, in "quick brown fox", "quick" and "brown" depend on "fox" (their head). The head of the entire sentence is usually the main verb.
+displacy.render(doc, style="dep", jupyter=True): This line uses the displacy module to generate a visual representation of the dependency parse tree.
+doc: The Doc object containing the parsed sentence data.
+style="dep": Specifies that we want a dependency parse visualization (as opposed to entity visualization style="ent").
+jupyter=True: Tells displacy to render the output in a format suitable for Jupyter notebooks, Google Colab, or other environments that can display HTML directly. If you were running this in a standard Python script, you might use displacy.serve() instead to start a web server displaying the visualization.
+Analysis of Sentence Structures and Dependency Relations:
+
+By looking at the printed output (Token → Dependency → Head) and the visualized tree for each sentence, you can observe:
+
+Which word is the head of the sentence (usually the verb, with the dependency label 'ROOT').
+Which words are the subjects ('nsubj').
+Which words are the objects ('dobj', 'iobj').
+Which words modify other words (e.g., adjectives modifying nouns - 'amod', adverbs modifying verbs - 'advmod').
+How prepositional phrases ('prep' as the relation between the head and the preposition, 'pobj' for the object of the preposition) attach to other words.
+Complex structures like relative clauses (e.g., in "The boy who wore a red hat won the race", 'who' relates to 'boy', 'wore' is the root of the clause depending on 'who', and words within the clause depend on 'wore').

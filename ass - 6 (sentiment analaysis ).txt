@@ -1,0 +1,105 @@
+!pip install transformers datasets torch
+
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import pipeline
+
+model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
+tokenizer = BertTokenizer.from_pretrained(model_name)
+model = BertForSequenceClassification.from_pretrained(model_name)
+
+def predict_sentiment(text):
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+    outputs = model(**inputs)
+    scores = outputs.logits.softmax(dim=-1).detach().numpy()
+
+    # Mapping scores to sentiments (1 to 5)
+    sentiments = ["Very Negative", "Negative", "Neutral", "Positive", "Very Positive"]
+    predicted_sentiment = sentiments[scores.argmax()]
+
+    return predicted_sentiment
+
+sample_texts = [
+    "I absolutely love this product! It's amazing.",
+    "The movie was okay, not great but not terrible.",
+    "I hated the service. It was the worst experience ever!"
+]
+
+
+for text in sample_texts:
+    print(f"Text: {text}")
+    print(f"Predicted Sentiment: {predict_sentiment(text)}\n")
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+BertTokenizer: A class for handling the tokenization process for BERT models. It converts raw text into numerical IDs that the model understands.
+BertForSequenceClassification: A pre-trained BERT model specifically adapted for sequence classification tasks, like sentiment analysis.
+pipeline: A higher-level abstraction in transformers to perform common tasks easily (like sentiment analysis) without manually handling tokenization and model outputs. While imported, it's not used in the predict_sentiment function defined later.
+
+2. Loading the Pre-trained Model and Tokenizer:
+model_name = "nlptown/bert-base-multilingual-uncased-sentiment" # Identifier for the pre-trained model
+tokenizer = BertTokenizer.from_pretrained(model_name) # Load the tokenizer associated with the model
+model = BertForSequenceClassification.from_pretrained(model_name) # Load the pre-trained BERT model itself
+model_name = "nlptown/bert-base-multilingual-uncased-sentiment": This line defines a string that acts as an identifier for a specific pre-trained model hosted on the Hugging Face Model Hub.
+nlptown: The organization/user that uploaded the model.
+bert-base: Indicates it's the base version of the BERT model (12 layers, 768 hidden size, 110M parameters).
+multilingual: Means the model was trained on text from multiple languages, making it capable of handling text in different languages.
+uncased: Means the model was trained on lowercased text.
+sentiment: Indicates the model has been fine-tuned for a sentiment analysis task. This specific model is trained to predict sentiment on a 1-to-5 star rating scale, common in reviews.
+tokenizer = BertTokenizer.from_pretrained(model_name): Loads the tokenizer that was used when the nlptown/bert-base-multilingual-uncased-sentiment model was pre-trained and fine-tuned. Each pre-trained model has a specific vocabulary and tokenization method. This tokenizer knows how to split text, convert words/sub-words into numerical IDs, add special tokens ([CLS], [SEP], [PAD]), and create attention masks.
+model = BertForSequenceClassification.from_pretrained(model_name): Loads the actual pre-trained BERT model architecture (BertForSequenceClassification) and the weights that were fine-tuned for the sentiment classification task on the 1-5 star scale.
+
+3. Defining the Sentiment Prediction Function:
+def predict_sentiment(text):
+    # Tokenize the input text
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+
+    # Pass the tokenized inputs through the model
+    outputs = model(**inputs)
+
+    # Get the raw output scores (logits) and convert them to probabilities
+    scores = outputs.logits.softmax(dim=-1).detach().numpy()
+
+    # Mapping scores (indices 0-4) to sentiment labels (1-5 stars)
+    sentiments = ["Very Negative", "Negative", "Neutral", "Positive", "Very Positive"] # Corresponds to 1-star to 5-star
+
+    # Find the index with the highest probability and map it to the sentiment label
+    predicted_sentiment = sentiments[scores.argmax()]
+
+    return predicted_sentiment
+Purpose: This function encapsulates the steps needed to take a raw text string and get a predicted sentiment label using the loaded model.
+inputs = tokenizer(...): This is the crucial step of preparing the text for the model.
+text: The input string.
+return_tensors="pt": Tells the tokenizer to return PyTorch tensors (as the model is a PyTorch model).
+padding=True: Adds special padding tokens ([PAD]) to the input sequence if it's shorter than the max_length or the longest sequence in a batch (useful for processing multiple texts at once, though here it's one by one). This makes all input sequences have the same length, which is required by the model.
+truncation=True: If the input text is longer than the model's maximum accepted length (max_length), it will be cut off (truncated). BERT models typically have a max length of 512 tokens.
+max_length=512: Explicitly sets the maximum sequence length.
+The inputs variable will be a dictionary containing tensors like input_ids (numerical representation of tokens), attention_mask (to tell the model which tokens are real vs. padding), and potentially token_type_ids.
+outputs = model(**inputs): This line passes the prepared input tensors to the BERT model. **inputs unpacks the inputs dictionary so the model receives arguments like input_ids=..., attention_mask=..., etc. The model processes the input and outputs an object (outputs) containing various results, most importantly the logits.
+scores = outputs.logits.softmax(dim=-1).detach().numpy(): This line processes the model's output to get the final prediction.
+outputs.logits: These are the raw, unnormalized scores produced by the model for each of the possible sentiment classes (5 classes for this 1-5 star model).
+.softmax(dim=-1): The softmax function converts these raw logits into probabilities. The dim=-1 applies the softmax along the last dimension, meaning the probabilities for each text will sum up to 1 across the 5 sentiment classes.
+.detach(): Removes the tensor from the PyTorch computation graph. This is necessary because we are just doing inference (prediction), not training, so we don't need to calculate gradients.
+.numpy(): Converts the PyTorch tensor into a NumPy array for easier manipulation. The scores variable will be an array (or a 2D array if processing a batch) containing the probability distribution over the 5 sentiment classes for the input text.
+sentiments = [...]: A list mapping the index of the output class (0, 1, 2, 3, 4) to a human-readable sentiment label ("Very Negative", "Negative", etc.). This mapping corresponds to the 1-star, 2-star, 3-star, 4-star, and 5-star ratings the model was trained on.
+predicted_sentiment = sentiments[scores.argmax()]:
+scores.argmax(): Finds the index within the scores array that has the highest probability. This index corresponds to the model's most confident prediction.
+sentiments[...]: Uses the index found by argmax() to look up the corresponding sentiment string from the sentiments list.
+return predicted_sentiment: The function returns the human-readable sentiment string.
+
+4. Applying the Function to Sample Texts:
+sample_texts = [
+    "I absolutely love this product! It's amazing.",
+    "The movie was okay, not great but not terrible.",
+    "I hated the service. It was the worst experience ever!"
+]
+
+# Iterate through sample texts and print predictions
+for text in sample_texts:
+    print(f"Text: {text}")
+    print(f"Predicted Sentiment: {predict_sentiment(text)}\n")
+sample_texts: A list containing a few example sentences to test the sentiment prediction.
+for text in sample_texts:: Loops through each string in the sample_texts list.
+print(...): Inside the loop, for each text, it prints the original text and then calls the predict_sentiment function to get and print the predicted sentiment.

@@ -1,0 +1,221 @@
+# Lab Assignment 5: N-gram Language Model
+# •	Implement unigram, bigram, and trigram models using NLTK.
+# •	Train on a small text dataset and compute probabilities of word sequences.
+# •	Use Laplace smoothing to handle unseen words.
+
+
+# Step 1: Install and import libraries
+!pip install -U nltk
+import nltk
+import math
+from nltk import word_tokenize
+from nltk.util import ngrams
+from collections import Counter, defaultdict
+
+nltk.download('punkt_tab')
+
+
+# Step 2: Sample small dataset (you can extend this or load from file)
+text = """
+Natural language processing enables computers to understand human language.
+It involves linguistics and machine learning. Language models are essential in NLP.
+"""
+
+
+# Step 3: Tokenization and preprocessing
+tokens = word_tokenize(text.lower())
+tokens = ['<s>'] + tokens + ['</s>']  # Start and end tokens
+
+
+# Step 4: Build Unigram, Bigram, and Trigram Models
+unigrams = list(ngrams(tokens, 1))
+bigrams = list(ngrams(tokens, 2))
+trigrams = list(ngrams(tokens, 3))
+
+unigram_counts = Counter(unigrams)
+bigram_counts = Counter(bigrams)
+trigram_counts = Counter(trigrams)
+
+vocab = set(tokens)
+V = len(vocab)  # Vocabulary size
+
+
+# Step 5: Define Probability Functions with Laplace Smoothing
+
+def unigram_prob(word):
+    return (unigram_counts[(word,)] + 1) / (sum(unigram_counts.values()) + V)
+
+def bigram_prob(w1, w2):
+    return (bigram_counts[(w1, w2)] + 1) / (unigram_counts[(w1,)] + V)
+
+def trigram_prob(w1, w2, w3):
+    return (trigram_counts[(w1, w2, w3)] + 1) / (bigram_counts[(w1, w2)] + V)
+
+
+# Step 6: Compute Probabilities of Sample Sequences
+
+def compute_sequence_prob(sequence):
+    tokens = ['<s>'] + word_tokenize(sequence.lower()) + ['</s>']
+
+    print(f"\nSequence: {sequence}")
+
+    # Unigram
+    uni_prob = 1.0
+    for w in tokens:
+        prob = unigram_prob(w)
+        uni_prob *= prob
+    print(f"Unigram Probability: {uni_prob:.10f} | LogProb: {math.log(uni_prob):.4f}")
+
+    # Bigram
+    bi_prob = 1.0
+    for w1, w2 in ngrams(tokens, 2):
+        prob = bigram_prob(w1, w2)
+        bi_prob *= prob
+    print(f"Bigram Probability: {bi_prob:.10f} | LogProb: {math.log(bi_prob):.4f}")
+
+    # Trigram
+    tri_prob = 1.0
+    for w1, w2, w3 in ngrams(tokens, 3):
+        prob = trigram_prob(w1, w2, w3)
+        tri_prob *= prob
+    print(f"Trigram Probability: {tri_prob:.10f} | LogProb: {math.log(tri_prob):.4f}")
+
+
+# Step 7: Test the model on a sample input
+compute_sequence_prob("language models are essential")
+compute_sequence_prob("computers learn language")
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+2. Sample Dataset and Preprocessing:
+# Step 2: Sample small dataset (you can extend this or load from file)
+text = """
+Natural language processing enables computers to understand human language.
+It involves linguistics and machine learning. Language models are essential in NLP.
+"""
+
+# Step 3: Tokenization and preprocessing
+tokens = word_tokenize(text.lower()) # Tokenize the text and convert to lowercase
+tokens = ['<s>'] + tokens + ['</s>']  # Add start and end tokens
+text = """...""": Defines the sample text data that the N-gram models will learn from.
+tokens = word_tokenize(text.lower()): This preprocesses the text:
+text.lower(): Converts the entire text to lowercase. This ensures that, e.g., "Language" and "language" are treated as the same word.
+word_tokenize(...): Splits the lowercased text into a list of individual words (tokens) using NLTK's tokenizer.
+tokens = ['<s>'] + tokens + ['</s>']: This is a crucial step for training language models that can handle sentence boundaries. Special "start-of-sentence" (<s>) and "end-of-sentence" (</s>) tokens are added at the beginning and end of the entire token list. This allows the model to learn probabilities like P(first_word | <s>) and P(</s> | last_word).
+
+3. Build N-gram Models (Counting Frequencies):
+
+Python
+
+# Step 4: Build Unigram, Bigram, and Trigram Models (Counting Frequencies)
+unigrams = list(ngrams(tokens, 1)) # Generate 1-word sequences
+bigrams = list(ngrams(tokens, 2)) # Generate 2-word sequences
+trigrams = list(ngrams(tokens, 3)) # Generate 3-word sequences
+
+unigram_counts = Counter(unigrams) # Count frequency of each unique unigram
+bigram_counts = Counter(bigrams) # Count frequency of each unique bigram
+trigram_counts = Counter(trigrams) # Count frequency of each unique trigram
+
+vocab = set(tokens) # Get the set of all unique tokens (including <s> and </s>)
+V = len(vocab)  # Get the size of the vocabulary. This is needed for smoothing.
+ngrams(tokens, n): This function from NLTK generates N-grams.
+unigrams = list(ngrams(tokens, 1)): Creates a list of unigrams (single tokens) as tuples, like [('<s>',), ('natural',), ('language',), ...].
+bigrams = list(ngrams(tokens, 2)): Creates a list of bigrams (sequences of 2 tokens) as tuples, like [('<s>', 'natural'), ('natural', 'language'), ('language', 'processing'), ...].
+trigrams = list(ngrams(tokens, 3)): Creates a list of trigrams (sequences of 3 tokens) as tuples, like [('<s>', 'natural', 'language'), ('natural', 'language', 'processing'), ('language', 'processing', 'enables'), ...].
+Counter(...): The Counter object is then used on these lists to count the occurrences of each unique N-gram tuple. unigram_counts stores how many times each word appears, bigram_counts stores how many times each 2-word sequence appears, and trigram_counts stores how many times each 3-word sequence appears.
+vocab = set(tokens): Creates a set of all unique tokens found in the preprocessed text (including <s> and </s>).
+V = len(vocab): Stores the size of this unique vocabulary. This value is crucial for Laplace smoothing.
+
+4. Probability Functions with Laplace Smoothing:
+
+Python
+
+# Step 5: Define Probability Functions with Laplace Smoothing
+
+# Probability of a single word P(word)
+def unigram_prob(word):
+    # Laplace smoothing formula: (count(word) + 1) / (Total Words + Vocabulary Size)
+    return (unigram_counts[(word,)] + 1) / (sum(unigram_counts.values()) + V)
+
+# Probability of a word given the previous word P(w2 | w1)
+def bigram_prob(w1, w2):
+    # Laplace smoothing formula: (count(w1, w2) + 1) / (count(w1) + Vocabulary Size)
+    # If (w1,) is not in unigram_counts, unigram_counts[(w1,)] defaults to 0
+    return (bigram_counts[(w1, w2)] + 1) / (unigram_counts[(w1,)] + V)
+
+# Probability of a word given the previous two words P(w3 | w1 w2)
+def trigram_prob(w1, w2, w3):
+    # Laplace smoothing formula: (count(w1, w2, w3) + 1) / (count(w1, w2) + Vocabulary Size)
+    # If (w1, w2) is not in bigram_counts, bigram_counts[(w1, w2)] defaults to 0
+    return (trigram_counts[(w1, w2, w3)] + 1) / (bigram_counts[(w1, w2)] + V)
+Concept: Probability in N-gram Models: An N-gram language model estimates the probability of a sequence of words (W=w_1w_2...w_m) by breaking it down using the chain rule of probability: P(W)=P(w_1)
+timesP(w_2∣w_1)
+timesP(w_3∣w_1w_2)
+times...
+timesP(w_m∣w_1...w_m−1). N-gram models approximate the conditional probability P(w_i∣w_1...w_i−1) by considering only the preceding N−1 words. For a trigram model (N=3), P(w_i∣w_1...w_i−1)
+approxP(w_i∣w_i−2w_i−1).
+Concept: Laplace Smoothing (Add-1 Smoothing): A major issue with N-gram models is data sparsity. If a specific N-gram (or its prefix) never appeared in the training data, its count is 0, leading to a probability of 0. This is problematic, as it assigns zero probability to any sequence containing an unseen N-gram, even if it's otherwise likely. Laplace smoothing addresses this by adding 1 to every count (both the specific N-gram count and the denominator count) and adding the vocabulary size (V) to the denominator.
+Formula: P(w_i∣w_i−N+1...w_i−1)=
+fractextcount(w_i−N+1...w_i)+1textcount(w_i−N+1...w_i−1)+V
+unigram_prob(word): Calculates P(word) using Laplace smoothing. The denominator is the total number of unigrams (tokens) plus the vocabulary size.
+bigram_prob(w1, w2): Calculates P(w2∣w1) using Laplace smoothing. The numerator is the count of the bigram (w1,w2)+1. The denominator is the count of the unigram (w1,)+V.
+trigram_prob(w1, w2, w3): Calculates P(w3∣w1w2) using Laplace smoothing. The numerator is the count of the trigram (w1,w2,w3)+1. The denominator is the count of the bigram (w1,w2)+V. Note that if bigram_counts[(w1, w2)] is 0 (the bigram prefix hasn't been seen), defaultdict behavior (or Counter returning 0 for unseen keys) correctly results in 0 + V in the denominator, preventing division by zero and giving a small non-zero probability.
+
+5. Compute Probability of Sample Sequences:
+
+Python
+
+# Step 6: Compute Probabilities of Sample Sequences
+
+# Function to compute the probability of an entire sequence using different N-gram models
+def compute_sequence_prob(sequence):
+    # Preprocess the input sequence the same way as the training data
+    tokens = ['<s>'] + word_tokenize(sequence.lower()) + ['</s>']
+
+    print(f"\nSequence: '{sequence}'") # Print the input sequence
+
+    # --- Unigram Probability ---
+    # P(w1 w2 ... wm) ≈ P(w1) * P(w2) * ... * P(wm) (where w1..wm are the tokens including <s> and </s>)
+    uni_prob = 1.0
+    for w in tokens: # Iterate through each token
+        prob = unigram_prob(w) # Get unigram probability P(w)
+        uni_prob *= prob # Multiply probabilities
+    # Print the result and its logarithm (LogProb)
+    # LogProb is often used because probabilities of sequences can become very small numbers.
+    # Multiplying probabilities corresponds to summing log probabilities (log(a*b) = log(a)+log(b))
+    print(f"Unigram Probability: {uni_prob:.10f} | LogProb: {math.log(uni_prob):.4f}")
+
+    # --- Bigram Probability ---
+    # P(w1 w2 ... wm) ≈ P(w1|<s>) * P(w2|w1) * ... * P(wm|w_m-1) * P(</s>|wm)
+    # The ngrams(tokens, 2) loop handles the transitions correctly.
+    bi_prob = 1.0
+    for w1, w2 in ngrams(tokens, 2): # Iterate through bigrams in the sequence
+        prob = bigram_prob(w1, w2) # Get bigram probability P(w2 | w1)
+        bi_prob *= prob # Multiply probabilities
+    print(f"Bigram Probability: {bi_prob:.10f} | LogProb: {math.log(bi_prob):.4f}")
+
+    # --- Trigram Probability ---
+    # P(w1 w2 ... wm) ≈ P(w1|<s><s>) * P(w2|<s>w1) * P(w3|w1w2) * ... * P(wm|w_m-2 w_m-1) * P(</s>|w_m-1 wm)
+    # The ngrams(tokens, 3) loop handles the transitions correctly.
+    tri_prob = 1.0
+    for w1, w2, w3 in ngrams(tokens, 3): # Iterate through trigrams in the sequence
+        prob = trigram_prob(w1, w2, w3) # Get trigram probability P(w3 | w1 w2)
+        tri_prob *= prob # Multiply probabilities
+    print(f"Trigram Probability: {tri_prob:.10f} | LogProb: {math.log(tri_prob):.4f}")
+Purpose: This function takes a sample sequence of text and calculates its overall probability according to the trained unigram, bigram, and trigram models, incorporating the start and end tokens.
+tokens = ['<s>'] + word_tokenize(sequence.lower()) + ['</s>']: The input sequence is preprocessed exactly like the training data (lowercase, tokenize, add <s> and </s>). This ensures consistency between training and testing.
+Unigram Calculation: It iterates through each token in the sequence and multiplies their individual unigram probabilities.
+Bigram Calculation: It iterates through all bigrams in the sequence (including those involving <s> and </s>) and multiplies their conditional bigram probabilities P(w_i∣w_i−1).
+Trigram Calculation: It iterates through all trigrams in the sequence (including those involving <s> and </s>) and multiplies their conditional trigram probabilities P(w_i∣w_i−2w_i−1). Note that the first trigram involves the two <s> tokens: $P(w\_1 | \\text{\, the second $P(w\_2 | \\text{\, and so on. The ngrams function naturally handles the beginning and end using the <s> and </s> tokens already added to the tokens list.
+Log Probability: The logarithm of the probability is also calculated and printed. This is common practice because probabilities of sequences can become extremely small numbers, which are prone to underflow errors. Working with logs (summing log probabilities instead of multiplying probabilities) is numerically more stable.
+
+6. Test the Model:
+
+Python
+
+# Step 7: Test the model on a sample input
+compute_sequence_prob("language models are essential") # Test sequence 1
+compute_sequence_prob("computers learn language") # Test sequence 2
+These lines call the compute_sequence_prob function with sample text sequences to demonstrate the calculated probabilities based on the models trained on the small text dataset. The probabilities will reflect how likely these sequences are according to the learned N-gram frequencies, smoothed by Laplace.

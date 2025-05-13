@@ -1,0 +1,221 @@
+# Lab Assignment 4: Probabilistic Parsing with CYK Algorithm and Neural Dependency Parsing
+# •	Implement the Cocke-Younger-Kasami (CYK) algorithm for parsing Context-Free Grammars (CFGs).
+# •	Train a Neural Dependency Parser (e.g., using Stanza or spaCy) on a dataset like Universal Dependencies.
+# •	Compare traditional parsing algorithms with neural parsing models in terms of accuracy and efficiency.
+
+
+# Step 1: Install Required Libraries
+!pip install spacy nltk benepar --quiet
+!python -m nltk.downloader punkt
+!python -m spacy download en_core_web_sm
+
+# Step 2: CYK Algorithm for Probabilistic Parsing
+# Simple CFG in CNF format
+grammar = {
+    "S": [("NP", "VP")],
+    "VP": [("V", "NP")],
+    "NP": [("Det", "N")],
+    "Det": [("the",)],
+    "N": [("cat",), ("dog",)],
+    "V": [("chased",), ("saw",)],
+}
+
+# Sentence to parse
+sentence = "the cat chased the dog".split()
+
+
+def cyk_parser(sentence, grammar):
+    n = len(sentence)
+    table = [[set() for _ in range(n)] for _ in range(n)]
+
+    # Fill in the table for words (1-length substrings)
+    for j in range(n):
+        for lhs, rhs_list in grammar.items():
+            for rhs in rhs_list:
+                if len(rhs) == 1 and rhs[0] == sentence[j]:
+                    table[j][j].add(lhs)
+
+    # Fill in the rest of the table
+    for span in range(2, n + 1):  # span length
+        for start in range(n - span + 1):
+            end = start + span - 1
+            for split in range(start, end):
+                left_cell = table[start][split]
+                right_cell = table[split + 1][end]
+                for lhs, rhs_list in grammar.items():
+                    for rhs in rhs_list:
+                        if len(rhs) == 2:
+                            if rhs[0] in left_cell and rhs[1] in right_cell:
+                                table[start][end].add(lhs)
+
+    return table, "S" in table[0][n - 1]
+
+# Run CYK parser
+table, is_valid = cyk_parser(sentence, grammar)
+print("CYK Parse Table:")
+for row in table:
+    print(row)
+
+print("\nCYK Output:", "Valid parse" if is_valid else "Invalid sentence")
+
+
+
+# Step 3: Neural Dependency Parsing using spaCy
+import spacy
+from spacy import displacy
+
+# Load spaCy model
+nlp = spacy.load("en_core_web_sm")
+
+# Parse the same sentence
+doc = nlp("The cat chased the dog.")
+
+# Display dependencies
+print("\nDependency Parse Tree:")
+for token in doc:
+    print(f"{token.text:<10} {token.dep_:<10} {token.head.text:<10} POS: {token.pos_}")
+
+# Visualize in Colab
+displacy.render(doc, style='dep', jupyter=True, options={'compact': True})
+
+
+# Step 4: Compare CYK vs Neural Parsing
+print("\n🔁 Comparison Summary")
+print("-" * 40)
+print("Approach           | Output")
+print("-" * 40)
+print(f"CYK Parser         | {'Valid parse' if is_valid else 'Invalid'}")
+print("Neural Parser      | Dependency tree shown above")
+print("\nCYK is rule-based, slow for large grammars.\nNeural models are faster, data-driven, and more scalable.")
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+2. CYK Algorithm for Context-Free Grammar Parsing:
+
+Python
+
+# Simple CFG in CNF format (Chomsky Normal Form)
+# Rules are either A -> BC or A -> a
+grammar = {
+    "S": [("NP", "VP")], # Sentence -> Noun Phrase Verb Phrase
+    "VP": [("V", "NP")], # Verb Phrase -> Verb Noun Phrase
+    "NP": [("Det", "N")], # Noun Phrase -> Determiner Noun
+    "Det": [("the",)],   # Determiner -> 'the'
+    "N": [("cat",), ("dog",)], # Noun -> 'cat' or 'dog'
+    "V": [("chased",), ("saw",)], # Verb -> 'chased' or 'saw'
+}
+
+# Sentence to parse (must be derivable by the grammar)
+sentence = "the cat chased the dog".split() # Convert string to a list of words
+
+# Implementation of the non-probabilistic CYK algorithm
+def cyk_parser(sentence, grammar):
+    n = len(sentence)
+    # Initialize the CYK table. table[i][j] will store the set of non-terminals
+    # that can derive the substring sentence[i...j] (inclusive, 0-indexed).
+    table = [[set() for _ in range(n)] for _ in range(n)]
+
+    # Fill in the table for substrings of length 1 (individual words)
+    for j in range(n): # Iterate through each word index j
+        for lhs, rhs_list in grammar.items(): # Check every grammar rule
+            for rhs in rhs_list:
+                # If the rule is A -> a (terminal rule)
+                if len(rhs) == 1 and rhs[0] == sentence[j]:
+                    table[j][j].add(lhs) # Add the LHS (e.g., 'Det', 'N', 'V') to the cell for this word
+
+    # Fill in the rest of the table for substrings of length 2 up to n
+    for span in range(2, n + 1): # Iterate through span lengths (2, 3, ..., n)
+        for start in range(n - span + 1): # Iterate through possible start indices for this span length
+            end = start + span - 1 # Calculate the end index
+            # Iterate through all possible split points within the current span
+            for split in range(start, end):
+                # Get the sets of non-terminals from the two sub-spans created by the split
+                left_cell = table[start][split] # Substring from start to split
+                right_cell = table[split + 1][end] # Substring from split+1 to end
+
+                # Check all grammar rules of the form A -> BC
+                for lhs, rhs_list in grammar.items():
+                    for rhs in rhs_list:
+                        if len(rhs) == 2: # If the rule is a non-terminal rule (A -> BC)
+                            # If B is in the left cell and C is in the right cell
+                            if rhs[0] in left_cell and rhs[1] in right_cell:
+                                table[start][end].add(lhs) # Add A (LHS) to the current cell
+
+    # The sentence is valid according to the grammar if the start symbol ('S')
+    # is in the top-most cell (representing the entire sentence, span n, start 0, end n-1)
+    return table, "S" in table[0][n - 1]
+
+# Run the CYK parser on the sample sentence
+table, is_valid = cyk_parser(sentence, grammar)
+
+print("CYK Parse Table:")
+for row in table: # Print the filled table
+    print(row)
+
+# Print whether the sentence is valid according to the grammar
+print("\nCYK Output:", "Valid parse" if is_valid else "Invalid sentence")
+Concept: CYK Algorithm: The Cocke-Younger-Kasami (CYK) algorithm is a dynamic programming algorithm used for parsing sentences according to a Context-Free Grammar (CFG). It determines whether a sentence can be generated by a given CFG and, if so, can produce a parse tree (or trees, if ambiguous). A requirement for the standard CYK is that the grammar must be in Chomsky Normal Form (CNF), where rules are limited to A -> BC (a non-terminal derives two non-terminals) or A -> a (a non-terminal derives a single terminal/word).
+grammar = {...}: Defines a simple CFG in CNF that can derive sentences like "the cat chased the dog".
+sentence = "the cat chased the dog".split(): The input sentence is split into a list of words.
+def cyk_parser(sentence, grammar): This function implements the CYK algorithm.
+It creates an n x n table, where n is the number of words. table[i][j] will store the set of non-terminal symbols that can derive the substring of the sentence starting at index i and ending at index j.
+Filling the table (bottom-up):
+It first fills the diagonal cells (table[j][j]) by checking which non-terminals in the grammar can directly derive the word sentence[j].
+Then, it iteratively fills the rest of the table for increasing substring lengths (span). For each span, it considers all possible ways to split the substring into two smaller substrings that have already been processed.
+For each split, it checks the grammar rules A -> BC. If a non-terminal B was found in the cell for the left substring (table[start][split]) and a non-terminal C was found in the cell for the right substring (table[split+1][end]), then the non-terminal A is added to the cell for the entire span (table[start][end]).
+return table, "S" in table[0][n - 1]: After filling the table, the algorithm checks if the start symbol "S" is present in the top-right cell (table[0][n-1]), which represents the entire sentence (from index 0 to n-1). If 'S' is there, it means the entire sentence can be derived from the start symbol, and thus the sentence is valid according to the grammar. The function returns the filled table and the validity status.
+The print statements show the resulting table (which can be interpreted to reconstruct a parse tree, though this code doesn't do that) and whether the sentence is valid.
+3. Neural Dependency Parsing using spaCy:
+
+Python
+
+# Step 3: Neural Dependency Parsing using spaCy
+# import spacy # Already imported
+# from spacy import displacy # Already imported
+
+# Load spaCy model (already loaded at the beginning)
+nlp = spacy.load("en_core_web_sm")
+
+# Parse the same sentence using spaCy
+# Note: spaCy's model is a neural model pre-trained on large datasets (like Universal Dependencies)
+doc = nlp("The cat chased the dog.")
+
+# Display dependency relationships textually
+print("\nDependency Parse Tree:")
+print("Token\t\tDependency\tHead\t\tPOS") # Header
+for token in doc:
+    # Print the token, its dependency relation, its head token, and its POS tag
+    print(f"{token.text:<10} {token.dep_:<10} {token.head.text:<10} POS: {token.pos_}")
+
+# Visualize the dependency structure using displaCy (best in environments like Jupyter/Colab)
+# style='dep' for dependency tree, jupyter=True for HTML output
+displacy.render(doc, style='dep', jupyter=True, options={'compact': True})
+Concept: Neural Dependency Parsing: This approach uses a neural network (often trained on massive datasets like Universal Dependencies) to predict the dependency relationships between words in a sentence. It identifies a "head" word for most words and assigns a label describing the grammatical relationship (e.g., subject, object, modifier). This results in a dependency tree.
+nlp = spacy.load("en_core_web_sm"): Loads the pre-trained spaCy model. This model includes a neural network component capable of performing dependency parsing.
+doc = nlp("The cat chased the dog."): Processes the sentence using the loaded spaCy model. spaCy's pipeline automatically tokenizes, POS tags, and performs dependency parsing, storing the results in the Doc object.
+for token in doc:: Iterates through the tokens produced by spaCy's tokenizer.
+print(f"{token.text} ... {token.dep_} ... {token.head.text} ... {token.pos_}"): Prints the properties of each token relevant to dependency parsing: the token itself (.text), the type of dependency relation it has with its head (.dep_), the text of its head token (.head.text), and its Part-of-Speech tag (.pos_).
+displacy.render(...): Uses displacy to generate an interactive visual diagram of the dependency tree, showing words connected by labeled arrows pointing from dependent to head. jupyter=True renders this as HTML directly in the output cell of a notebook.
+4. Comparison Summary:
+
+Python
+
+# Step 4: Compare CYK vs Neural Parsing
+print("\n🔁 Comparison Summary")
+print("-" * 40)
+print("Approach             | Output")
+print("-" * 40)
+print(f"CYK Parser           | {'Valid parse' if is_valid else 'Invalid'}") # Prints the result from the CYK step
+print("Neural Parser        | Dependency tree shown above") # Refers to the displaCy visualization
+print("\nCYK is rule-based, slow for large grammars.\nNeural models are faster, data-driven, and more scalable.") # Provides a brief textual comparison
+This section simply prints headers and summarizes the outputs of the two approaches demonstrated by the code.
+It highlights the key differences shown in the code:
+CYK: Outputs whether the sentence is valid according to the specific predefined grammar and produces an intermediate parse table. It's rule-based.
+Neural Parser (spaCy): Outputs a dependency tree showing relationships between words. It's data-driven (uses a pre-trained model).
+The final print statements offer a high-level comparison mentioned in the prompt: CYK (traditional) is rule-based and can be slow with large, complex grammars, while neural models are generally faster, learn from data, and scale better to real-world text variations.
+Key Takeaways from the Code:
+
+CYK is a classic algorithm for checking if a sentence conforms to a CFG and identifying constituency structures (like identifying "the cat" as an NP). It requires the grammar in CNF. The version here is non-probabilistic; a probabilistic version would also calculate the most likely parse.
+Neural Dependency Parsing (spaCy) is a modern approach that focuses on word-to-word dependencies. It uses a model trained on vast amounts of data to predict these relationships. It's typically more practical for analyzing arbitrary real-world text than writing exhaustive CFGs.

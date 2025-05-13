@@ -1,0 +1,273 @@
+import nltk
+import pandas as pd
+from nltk import pos_tag, word_tokenize
+
+nltk.download('averaged_perceptron_tagger')
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger_eng')
+
+morphology_rules = {
+    "NN": [
+        ("un", "Prefix"),
+        ("s", "Plural Suffix"),
+        ("es", "Plural Suffix (for words ending in s, x, z, sh, ch)"),
+        ("er", "Comparative Suffix"),
+        ("ness", "Noun-forming Suffix")
+    ],  # Nouns
+
+    "VB": [
+        ("re", "Prefix"),
+        ("ing", "Present Participle Suffix"),
+        ("ed", "Past Tense Suffix"),
+        ("es", "3rd Person Singular Suffix"),
+        ("ize", "Verb-forming Suffix")
+    ],  # Verbs
+
+    "JJ": [
+        ("un", "Prefix"),
+        ("er", "Comparative Suffix"),
+        ("est", "Superlative Suffix"),
+        ("ly", "Adverb-forming Suffix")
+    ],  # Adjectives
+}
+
+def get_pos_tag(word):
+    tagged_word = pos_tag(word_tokenize(word))
+    return tagged_word[0][1]
+
+# Function to apply morphological transformations based on POS tag
+def apply_morphology(word):
+    pos = get_pos_tag(word)
+    pos_category = pos[:2]
+
+    transformations = []
+
+    # Apply transformations if POS type exists in our rules
+    if pos_category in morphology_rules:
+        for rule, rule_type in morphology_rules[pos_category]:
+            transformed_word = None
+
+
+            if rule_type == "Prefix":
+                transformed_word = rule + word
+
+
+            elif "Plural Suffix" in rule_type:
+                if word.endswith(("s", "x", "z", "sh", "ch")):
+                    transformed_word = word + "es"
+                elif word.endswith("y") and word[-2] not in "aeiou":
+                    transformed_word = word[:-1] + "ies"
+                else:
+                    transformed_word = word + "s"
+
+
+            elif rule_type == "Past Tense Suffix":
+                if word.endswith("e"):
+                    transformed_word = word + "d"
+                elif word.endswith("y") and word[-2] not in "aeiou":
+                    transformed_word = word[:-1] + "ied"
+                else:
+                    transformed_word = word + "ed"
+
+
+            elif rule == "ing":
+                if word.endswith("e") and word not in ["be", "see", "flee"]:
+                    transformed_word = word[:-1] + "ing"
+                else:
+                    transformed_word = word + "ing"
+
+
+            elif rule in ["er", "est"]:
+                if word.endswith("e"):
+                    transformed_word = word + rule
+                elif len(word) > 2 and word[-1] in "bcdfghjklmnpqrstvwxyz" and word[-2] in "aeiou":
+                    transformed_word = word + word[-1] + rule
+                else:
+                    transformed_word = word + rule
+
+            # Default case for other suffixes
+            else:
+                transformed_word = word + rule
+
+
+            if transformed_word:
+                transformations.append((transformed_word, f"Applied '{rule}' ({rule_type})"))
+
+
+    df_output = pd.DataFrame(transformations, columns=["Transformed Word", "Change Applied"])
+    return df_output if not df_output.empty else "No transformations found for this word."
+
+
+user_word = input("Enter a word for POS tagging and morphology transformation: ").strip().lower()
+
+print(f"\n POS Tagging for '{user_word}': {get_pos_tag(user_word)}")
+print("\n  Morphological Transformations:")
+apply_morphology(user_word)
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+1. Setup and Imports:
+import nltk
+import pandas as pd # Imported, but not used for the final output display of transformations
+from nltk import pos_tag, word_tokenize # Core NLTK functions for tokenizing and POS tagging
+
+# Download necessary NLTK data files
+nltk.download('averaged_perceptron_tagger') # Pre-trained model for English POS tagging
+nltk.download('punkt_tab') # Tokenizer model
+nltk.download('averaged_perceptron_tagger_eng') # Another potential tagger model (sometimes redundant with the first)
+Libraries: Imports nltk for core NLP tasks, pandas (though its DataFrame functionality isn't fully utilized in the final output display), and specific NLTK functions pos_tag (to get the part of speech) and word_tokenize (to split text into words).
+NLTK Downloads: Downloads the necessary pre-trained models:
+averaged_perceptron_tagger: A standard English POS tagger.
+punkt_tab: Data for the tokenizer.
+averaged_perceptron_tagger_eng: Potentially another tagger model; sometimes averaged_perceptron_tagger is sufficient. These ensure NLTK has the resources to perform POS tagging accurately.
+
+2. Custom Morphology Rules:
+morphology_rules = {
+    "NN": [ # Rules for Nouns (NN, NNS, NNP, NNPS)
+        ("un", "Prefix"),
+        ("s", "Plural Suffix"), # Simplified rule for adding 's'
+        ("es", "Plural Suffix (for words ending in s, x, z, sh, ch)"), # Simplified rule for adding 'es'
+        ("er", "Comparative Suffix"), # Although 'er' is usually for adjectives, it's included here - demonstrates custom rules
+        ("ness", "Noun-forming Suffix")
+    ],
+    "VB": [ # Rules for Verbs (VB, VBD, VBG, VBN, VBP, VBZ)
+        ("re", "Prefix"),
+        ("ing", "Present Participle Suffix"),
+        ("ed", "Past Tense Suffix"),
+        ("es", "3rd Person Singular Suffix"), # e.g., 'go' -> 'goes'
+        ("ize", "Verb-forming Suffix") # e.g., 'standard' -> 'standardize'
+    ],
+    "JJ": [ # Rules for Adjectives (JJ, JJR, JJS)
+        ("un", "Prefix"),
+        ("er", "Comparative Suffix"),
+        ("est", "Superlative Suffix"),
+        ("ly", "Adverb-forming Suffix") # Although 'ly' forms adverbs, it's often associated with adjectives
+    ],
+}
+This is the core of the script's custom logic. It's a Python dictionary defining example rules for morphological transformations based on simplified POS categories:
+Keys: "NN" (Nouns), "VB" (Verbs), "JJ" (Adjectives) - corresponding to the first two characters of many NLTK POS tags.
+Values: Lists of tuples. Each tuple contains:
+The prefix or suffix string (e.g., "un", "s", "ing").
+A descriptive label for the rule type (e.g., "Prefix", "Plural Suffix").
+Important Note: These rules are simplifications and don't cover all English morphology or irregular forms (e.g., "go" -> "went", "child" -> "children"). They are just for demonstration purposes.
+
+3. Helper Function: Get POS Tag:
+def get_pos_tag(word):
+    # pos_tag works on lists of tokens, so we tokenize the single word
+    tagged_word = pos_tag(word_tokenize(word))
+    # tagged_word will be something like [('word', 'POS_TAG')]
+    return tagged_word[0][1] # Return the POS tag string
+Purpose: Takes a single word as input and uses NLTK's pos_tag to determine its Part-of-Speech.
+word_tokenize(word): Splits the input word into a list of tokens. Since we're passing a single word, this will typically result in a list containing just that word (e.g., "running" becomes ['running']). pos_tag requires a list input.
+pos_tag(...): Performs the actual tagging. It returns a list of tuples, where each tuple is (word, pos_tag). For a single word input, the result is [(input_word, its_pos_tag)].
+tagged_word[0][1]: Accesses the first (and only) tuple in the tagged_word list ([0]), and then gets the second element of that tuple ([1]), which is the POS tag string.
+
+4. Main Function: Apply Morphology Rules:
+# Function to apply morphological transformations based on POS tag
+def apply_morphology(word):
+    pos = get_pos_tag(word) # Get the full POS tag (e.g., 'NN', 'NNS', 'VB', 'VBG', 'JJ', 'JJR')
+    pos_category = pos[:2] # Get the first two characters of the tag (e.g., 'NN', 'VB', 'JJ')
+
+    transformations = [] # List to store the generated transformations
+
+    # Apply transformations if POS category exists in our custom rules
+    if pos_category in morphology_rules:
+        for rule, rule_type in morphology_rules[pos_category]: # Loop through rules defined for this POS category
+            transformed_word = None # Variable to hold the result of applying a single rule
+
+            # --- Apply specific rules based on rule_type or rule ---
+            if rule_type == "Prefix":
+                transformed_word = rule + word
+
+            elif "Plural Suffix" in rule_type: # Check for both plural rule types
+                # Simplified plural rules
+                if word.endswith(("s", "x", "z", "sh", "ch")):
+                    transformed_word = word + "es"
+                elif word.endswith("y") and (len(word) < 2 or word[-2] not in "aeiou"): # Handle words ending in y (e.g., "fly" -> "flies")
+                    transformed_word = word[:-1] + "ies"
+                else: # Default plural rule
+                    transformed_word = word + "s"
+
+            elif rule_type == "Past Tense Suffix":
+                 # Simplified past tense rules
+                if word.endswith("e"): # e.g., "live" -> "lived"
+                    transformed_word = word + "d"
+                elif word.endswith("y") and (len(word) < 2 or word[-2] not in "aeiou"): # e.g., "try" -> "tried"
+                    transformed_word = word[:-1] + "ied"
+                else: # Default past tense rule
+                    transformed_word = word + "ed"
+
+            elif rule == "ing": # Specific check for the 'ing' rule
+                 # Simplified -ing rule
+                if word.endswith("e") and word not in ["be", "see", "flee", "agree"]: # Handle words ending in e (drop e) except some exceptions
+                     transformed_word = word[:-1] + "ing"
+                # Note: Does not handle doubling consonant (e.g., "run" -> "running")
+                else:
+                     transformed_word = word + "ing"
+
+            elif rule in ["er", "est"]: # Specific check for comparative/superlative
+                 # Simplified comparative/superlative rules
+                if word.endswith("e"): # e.g., "large" -> "larger", "largest"
+                     transformed_word = word + rule
+                # Handle doubling consonant (e.g., "big" -> "bigger", "biggest")
+                elif len(word) > 1 and word[-1] not in "aeiou" and word[-2] in "aeiou" and word[-3] not in "aeiou":
+                     transformed_word = word + word[-1] + rule
+                else: # Default rule
+                     transformed_word = word + rule
+
+            # Default case for other suffixes not needing special handling (e.g., 'ness', 'ize', 'ly', 'es' for verbs)
+            # This applies if none of the specific `elif` conditions for this rule were met above,
+            # and the transformed_word is still None. However, the specific rules above
+            # cover most defined rules. This 'else' block logic isn't strictly needed
+            # with the current structure where `transformed_word` is calculated within `elif`.
+            # A simpler structure might be to just calculate transformed_word based on rule_type/rule
+            # and then check if it's not None before appending. The current structure is a bit
+            # complex because it re-checks rule types.
+
+            # A better approach: Check if transformed_word was set by the conditions above.
+            # If a specific condition for this rule was met, transformed_word is set.
+            # If not, it remains None.
+            # For simple suffix additions not covered by special rules (like 'ness', 'ize', 'ly',
+            # or the VB 'es' rule which is just append 'es'), a simpler check is needed.
+            # Let's adjust the logic slightly for clarity based on the original code's flow:
+            # The original code's structure implies that if none of the *specific* `elif` blocks
+            # for the *current rule* were hit, it *might* fall through. But the `elif` structure
+            # ensures only one block per rule is executed *if* its condition matches.
+            # The final `else` block as written in the prompt seems misplaced or logically flawed
+            # within the specific `elif` chain for transformation logic.
+            # Let's assume the intention is: if a specific transformation rule was applied, add it.
+
+            # Simplified logic based on the common intent of such code:
+            # If transformed_word was successfully calculated by one of the conditions:
+            if transformed_word and transformed_word != word: # Ensure transformation happened and it's different from original
+                 transformations.append((transformed_word, f"Applied '{rule}' ({rule_type})"))
+
+
+    # After looping through all rules for the POS category:
+    df_output = pd.DataFrame(transformations, columns=["Transformed Word", "Change Applied"])
+
+    # Return a DataFrame if transformations were found, otherwise a message
+    return df_output if not df_output.empty else "No transformations found for this word based on defined rules."
+Purpose: This is the main function that takes a word, finds its POS, and then attempts to apply the custom rules defined in morphology_rules.
+pos = get_pos_tag(word): Calls the helper function to get the full NLTK POS tag (e.g., 'NNS' for "dogs", 'VBG' for "running", 'JJR' for "bigger").
+pos_category = pos[:2]: Extracts the first two characters of the POS tag (e.g., 'NN', 'VB', 'JJ'). This simplifies the tag to match the keys in the morphology_rules dictionary.
+if pos_category in morphology_rules:: Checks if there are any custom rules defined for this broad POS category.
+for rule, rule_type in morphology_rules[pos_category]:: If rules exist, it iterates through each (rule, rule_type) tuple defined for that category.
+Conditional Logic (Applying Rules): Inside the loop, a series of if/elif statements checks the rule_type or the specific rule to determine how to apply the transformation. These conditions implement the simplified logic for adding prefixes and different suffixes (s/es/ies for plural, d/ed/ied for past tense, ing, er, est, ness, ize, ly), often looking at the word's ending. Again, these are simplified rules and will not handle all cases correctly (especially irregular words).
+if transformed_word and transformed_word != word:: After checking the specific rules for the current rule, this condition checks if transformed_word was successfully created and is different from the original word. If so, the resulting word and a description are added as a tuple to the transformations list.
+df_output = pd.DataFrame(transformations, columns=["Transformed Word", "Change Applied"]): After checking all rules for the POS category, this creates a pandas DataFrame from the collected transformations.
+return df_output if not df_output.empty else ...: The function returns this DataFrame if any transformations were found; otherwise, it returns a message indicating that no rules applied.
+
+5. User Input and Output:
+user_word = input("Enter a word for POS tagging and morphology transformation: ").strip().lower()
+
+print(f"\n🔹 POS Tagging for '{user_word}': {get_pos_tag(user_word)}")
+print("\n🔹 Morphological Transformations:")
+# Call the function and print its return value
+print(apply_morphology(user_word))
+user_word = input(...): Prompts the user to enter a word, reads their input, removes leading/trailing whitespace (.strip()), and converts it to lowercase (.lower()) for consistent processing.
+print(f"\n🔹 POS Tagging..."): Prints the POS tag of the entered word by calling the get_pos_tag function.
+print("\n🔹 Morphological Transformations:"): Prints a header for the transformations section.
+print(apply_morphology(user_word)): Calls the apply_morphology function with the user's word and prints whatever that function returns (either the DataFrame of transformations or the "No transformations" message).

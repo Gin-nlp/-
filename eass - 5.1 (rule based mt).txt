@@ -1,0 +1,207 @@
+#Lab Assignment 3: Implementing Rule-Based Machine Translation
+#•	Design a simple rule-based translation system from English to Hindi (or any Indian language).
+#•	Create basic grammar rules for sentence structure transformation.
+#•	Use regular expressions and dictionaries for word translation.
+
+# Step 1: Define the English to Hindi dictionary
+translation_dict = {
+    'i': 'मैं',
+    'you': 'तुम',
+    'he': 'वह',
+    'she': 'वह',
+    'we': 'हम',
+    'they': 'वे',
+    'am': 'हूँ',
+    'are': 'हो',
+    'is': 'है',
+    'was': 'था',
+    'were': 'थे',
+    'eat': 'खाता',
+    'eats': 'खाता',
+    'ate': 'खाया',
+    'go': 'जाता',
+    'goes': 'जाता',
+    'went': 'गया',
+    'like': 'पसंद करता',
+    'likes': 'पसंद करता',
+    'love': 'प्यार करता',
+    'loves': 'प्यार करता',
+    'play': 'खेलता',
+    'plays': 'खेलता',
+    'apple': 'सेब',
+    'mango': 'आम',
+    'cricket': 'क्रिकेट',
+    'football': 'फुटबॉल',
+    'school': 'स्कूल',
+    'home': 'घर',
+    'to': 'को',
+    'the': '',
+    'a': '',
+    'an': '',
+    'and': 'और'
+}
+
+# Step 2: Basic function to translate words
+def translate_word(word):
+    word = word.lower()
+    return translation_dict.get(word, word)  # return original if not found
+
+
+# Step 3: Sentence structure transformation
+# English: Subject + Verb + Object
+# Hindi: Subject + Object + Verb (SOV)
+
+import re
+
+def translate_sentence(sentence):
+    # Tokenize the sentence
+    words = re.findall(r'\w+', sentence.lower())
+
+    # Basic grammar assumption: 3-word structure: Subject Verb Object
+    if len(words) == 3:
+        subject, verb, obj = words
+        hindi_subject = translate_word(subject)
+        hindi_object = translate_word(obj)
+        hindi_verb = translate_word(verb)
+
+        return f"{hindi_subject} {hindi_object} {hindi_verb}।"
+
+    # If sentence doesn't follow SVO structure, do word-by-word translation
+    else:
+        translated_words = [translate_word(word) for word in words]
+        return ' '.join(translated_words) + '।'
+
+
+# Step 4: Test the translation system
+english_sentences = [
+    "I eat mango",
+    "She plays football",
+    "They love cricket",
+    "We go to school",
+    "He likes apple"
+]
+
+for sentence in english_sentences:
+    print(f"English: {sentence}")
+    print(f"Hindi: {translate_sentence(sentence)}\n")
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+1. Define the English to Hindi Dictionary:
+
+Python
+
+# Step 1: Define the English to Hindi dictionary
+translation_dict = {
+    'i': 'मैं', 'you': 'तुम', 'he': 'वह', 'she': 'वह', 'we': 'हम', 'they': 'वे', # Pronouns
+    'am': 'हूँ', 'are': 'हो', 'is': 'है', 'was': 'था', 'were': 'थे',             # Forms of 'to be'
+    'eat': 'खाता', 'eats': 'खाता', 'ate': 'खाया',                            # Forms of 'eat' (simplified)
+    'go': 'जाता', 'goes': 'जाता', 'went': 'गया',                                # Forms of 'go' (simplified)
+    'like': 'पसंद करता', 'likes': 'पसंद करता',                               # Forms of 'like' (simplified)
+    'love': 'प्यार करता', 'loves': 'प्यार करता',                               # Forms of 'love' (simplified)
+    'play': 'खेलता', 'plays': 'खेलता',                                     # Forms of 'play' (simplified)
+    'apple': 'सेब', 'mango': 'आम', 'cricket': 'क्रिकेट', 'football': 'फुटबॉल', # Nouns
+    'school': 'स्कूल', 'home': 'घर',                                        # Locations
+    'to': 'को',                                                            # Preposition
+    'the': '', 'a': '', 'an': '',                                         # Articles (translated as empty string - ignored)
+    'and': 'और'                                                            # Conjunction
+    # ... this dictionary is very limited and lacks many words and variations
+}
+translation_dict: This Python dictionary serves as the core lookup table for the translation.
+Keys are English words (all in lowercase).
+Values are their corresponding (simplified) Hindi translations.
+Limitations: This dictionary is very small. It includes basic pronouns, some verb forms (simplified - it doesn't distinguish gender or number consistently, e.g., 'खाता' is masculine singular), a few nouns, and some function words. Articles ('the', 'a', 'an') are mapped to empty strings (''), meaning they will be removed from the output.
+2. Basic Word Translation Function:
+
+Python
+
+# Step 2: Basic function to translate words
+def translate_word(word):
+    word = word.lower() # Convert input word to lowercase
+    # Look up the word in the dictionary
+    # .get(key, default) returns the value for the key if found, otherwise returns the default
+    return translation_dict.get(word, word) # Returns Hindi translation if in dict, otherwise returns original English word
+translate_word(word): This function takes a single English word as input.
+word = word.lower(): Converts the input word to lowercase. This is essential because the keys in translation_dict are all lowercase.
+return translation_dict.get(word, word): This is the dictionary lookup.
+translation_dict.get(word, ...): Attempts to find the word as a key in the translation_dict.
+If the word is found as a key, it returns the corresponding Hindi value (the translation).
+If the word is not found in the dictionary, it returns the second argument (word in this case). This means any word not in the dictionary will be returned as is (i.e., untranslated English).
+3. Sentence Structure Transformation (Rule-Based):
+
+Python
+
+# Step 3: Sentence structure transformation
+# English: Subject + Verb + Object (SVO)
+# Hindi: Subject + Object + Verb (SOV)
+
+import re # Import regular expression module for simple tokenization
+
+def translate_sentence(sentence):
+    # Tokenize the sentence: find all sequences of word characters (letters, numbers, underscore)
+    # This simple regex ignores punctuation and just extracts "words"
+    words = re.findall(r'\w+', sentence.lower())
+
+    # Basic grammar assumption and transformation rule:
+    # ONLY apply the SVO -> SOV rule if the sentence has exactly 3 words
+    if len(words) == 3:
+        subject, verb, obj = words # Assume the 3 words are in SVO order
+        hindi_subject = translate_word(subject) # Translate each part
+        hindi_object = translate_word(obj)
+        hindi_verb = translate_word(verb)
+
+        # Construct the Hindi sentence in Subject + Object + Verb order
+        return f"{hindi_subject} {hindi_object} {hindi_verb}।" # Add Hindi full stop
+
+    # If sentence doesn't strictly follow the assumed 3-word SVO structure,
+    # fall back to simple word-by-word translation without structural change
+    else:
+        translated_words = [translate_word(word) for word in words] # Translate each word individually
+        return ' '.join(translated_words) + '।' # Join translated words with space and add Hindi full stop
+Concept: Rule-Based Machine Translation (RBMT): RBMT systems rely on linguistic rules handcrafted by experts (grammar rules, dictionaries, morphological rules, etc.). This function implements a very basic RBMT approach.
+Sentence Structure: English typically uses Subject-Verb-Object (SVO) order (e.g., "I eat mango"). Hindi typically uses Subject-Object-Verb (SOV) order (e.g., "I mango eat"). This rule-based system aims to perform this structural transformation for a specific case.
+import re: Imports the regular expression module.
+words = re.findall(r'\w+', sentence.lower()): This performs simple tokenization. It converts the input sentence to lowercase and then uses re.findall(r'\w+') to find all occurrences of sequences of word characters (\w+). This effectively extracts words while ignoring spaces, punctuation, etc.
+if len(words) == 3:: This is the core rule. The code only attempts the SVO to SOV transformation if the tokenized sentence has exactly 3 words. This is a major simplification and limitation.
+subject, verb, obj = words: If the sentence has 3 words, it assumes they are the Subject, Verb, and Object in that order.
+hindi_subject = translate_word(subject) etc.: It then translates each of these three words using the translate_word function.
+return f"{hindi_subject} {hindi_object} {hindi_verb}।": It constructs the output Hindi sentence by arranging the translated subject, object, and verb in the SOV order and adds the Hindi full stop character (।).
+else:: If the tokenized sentence does not have exactly 3 words (e.g., "I eat apples.", "He likes big red apples.", "Go home."), this block is executed.
+translated_words = [translate_word(word) for word in words]: It performs a simple word-by-word translation of all the words extracted by re.findall, using the translate_word function. No structural reordering happens here.
+return ' '.join(translated_words) + '।': It joins the translated words back into a string with spaces and adds the Hindi full stop.
+4. Test the Translation System:
+
+Python
+
+# Step 4: Test the translation system
+english_sentences = [
+    "I eat mango",        # Should match the 3-word rule
+    "She plays football", # Should match the 3-word rule
+    "They love cricket",  # Should match the 3-word rule
+    "We go to school",    # Should match the 3-word rule
+    "He likes apple"      # Should match the 3-word rule
+    # Add more test sentences here, including those that *won't* match the 3-word rule
+    # e.g., "I eat apples.", "Go home.", "The quick brown fox.", "He was eating."
+]
+
+for sentence in english_sentences: # Loop through the sample English sentences
+    print(f"English: {sentence}")
+    print(f"Hindi: {translate_sentence(sentence)}\n") # Call the translator and print the output
+english_sentences: A list of sample English sentences used to test the translate_sentence function. Notice that the examples provided are all simple 3-word sentences designed to fit the specific rule implemented in the translate_sentence function.
+The loop iterates through each sentence, prints the original English, calls translate_sentence to get the Hindi translation, and prints the result.
+Limitations of this Rule-Based System:
+
+Very Limited Vocabulary: Only words in the translation_dict are translated.
+Extremely Simplistic Rules: It only handles a single sentence structure (exactly 3-word SVO) and falls back to word-by-word for everything else. It doesn't handle:
+Sentences with different numbers of words.
+Sentences with adjectives, adverbs, prepositional phrases (except the hardcoded 'to').
+Different verb tenses, moods, or aspects (it just has a few forms in the dict).
+Subject-verb agreement (Hindi verbs change based on gender/number/person of the subject/object, which is not handled).
+Plurality (e.g., "apples" would be translated based on "apple").
+Complex sentence structures, questions, commands, etc.
+Idioms or phrases.
+Ambiguity.
+No Morphological Analysis: It translates words as whole units; it doesn't understand how words are built from root forms and affixes, which is very important for morphologically rich languages like Hindi.

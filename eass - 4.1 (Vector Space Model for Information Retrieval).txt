@@ -1,0 +1,169 @@
+# Lab Assignment 1: Implementing the Vector Space Model for Information Retrieval
+# •	Implement a simple search engine using the TF-IDF vectorization method.
+# •	Use a small dataset of documents and allow the user to input a query.
+# •	Compute cosine similarity to retrieve the most relevant documents.
+# •	Use Scikit-learn’s TfidfVectorizer for vectorization.
+
+
+# Step 1: Import required libraries
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+
+# Step 2: Define your small dataset of documents
+documents = [
+    "The sky is blue and beautiful.",
+    "Love this blue and bright sky!",
+    "The quick brown fox jumps over the lazy dog.",
+    "A king's breakfast has sausages, ham, bacon, eggs, toast and beans",
+    "I love green eggs, ham, sausages and bacon!",
+    "The brown fox is quick and the blue dog is lazy!",
+    "The sky is very blue and the sky is very beautiful today",
+    "The dog is lazy but the brown fox is quick."
+]
+
+
+# Step 3: Preprocessing (optional - lowercase, etc.)
+processed_docs = [doc.lower() for doc in documents]
+
+
+# Step 4: Vectorize using TF-IDF
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(processed_docs)
+
+
+# Step 5: Accept user query
+query = input("Enter your search query: ").lower()
+
+
+# Step 6: Vectorize the query using the same vectorizer
+query_vector = vectorizer.transform([query])
+
+
+# Step 7: Compute cosine similarity
+cos_similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
+
+
+# Step 8: Rank documents based on similarity score
+top_doc_indices = cos_similarities.argsort()[::-1]
+
+# Step 9: Display results
+print("\nTop Relevant Documents:")
+for idx in top_doc_indices:
+    score = cos_similarities[idx]
+    if score > 0:
+        print(f"Score: {score:.4f} | Document: {documents[idx]}")
+    else:
+        print("No more relevant documents.")
+        break
+
+-------------------------------------------------------------------------------------------------------------
+
+TfidfVectorizer from sklearn.feature_extraction.text: This class handles the process of converting a collection of raw text documents into a matrix of TF-IDF features. It automatically handles tokenization, counting, and calculating both Term Frequency (TF) and Inverse Document Frequency (IDF) scores.
+cosine_similarity from sklearn.metrics.pairwise: This function computes the cosine similarity between pairs of vectors.
+numpy as np: Imports the NumPy library, essential for efficient numerical operations, especially the argsort() method used here for ranking.
+2. Define Documents:
+
+Python
+
+# Step 2: Define your small dataset of documents
+documents = [
+    "The sky is blue and beautiful.",
+    "Love this blue and bright sky!",
+    "The quick brown fox jumps over the lazy dog.",
+    "A king's breakfast has sausages, ham, bacon, eggs, toast and beans",
+    "I love green eggs, ham, sausages and bacon!",
+    "The brown fox is quick and the blue dog is lazy!",
+    "The sky is very blue and the sky is very beautiful today",
+    "The dog is lazy but the brown fox is quick."
+]
+documents: This is a list of strings, where each string represents a separate document in our small collection that the search engine will operate on.
+3. Preprocessing:
+
+Python
+
+# Step 3: Preprocessing (optional - lowercase, etc.)
+processed_docs = [doc.lower() for doc in documents] # Convert all documents to lowercase
+Purpose: Text preprocessing prepares the text for vectorization. In this simple case, it just converts all documents to lowercase. This is important so that, for example, "The" and "the" are treated as the same word. More advanced preprocessing might include removing punctuation, stop words, or applying stemming/lemmatization.
+processed_docs = [doc.lower() for doc in documents]: This is a list comprehension that creates a new list processed_docs where each document is the lowercase version of the corresponding document in the original documents list.
+4. Vectorize using TF-IDF:
+
+Python
+
+# Step 4: Vectorize using TF-IDF
+vectorizer = TfidfVectorizer() # Initialize the vectorizer
+tfidf_matrix = vectorizer.fit_transform(processed_docs) # Learn vocabulary and IDF, then transform documents
+Concept: TF-IDF Vectorization: TF-IDF (Term Frequency-Inverse Document Frequency) is a numerical statistic that reflects how important a word is to a document in a collection or corpus.   
+TF (Term Frequency): How often a word appears in a document.
+IDF (Inverse Document Frequency): A measure of how rare a word is across the entire collection of documents. Words that appear in many documents get a lower IDF score.
+TF-IDF Score: TF * IDF. A high TF-IDF score means a word is frequent in a specific document but rare across the collection, suggesting it's a distinctive word for that document.
+vectorizer = TfidfVectorizer(): Creates an instance of the TfidfVectorizer.
+tfidf_matrix = vectorizer.fit_transform(processed_docs): This is a key step.
+fit(processed_docs): The vectorizer analyzes the processed_docs to learn:
+The complete vocabulary (all unique words) across all documents.
+The Inverse Document Frequency (IDF) for each word in the vocabulary.
+transform(processed_docs): Using the learned vocabulary and IDFs, it converts each document in processed_docs into a numerical vector. The resulting tfidf_matrix is a matrix where each row corresponds to a document and each column corresponds to a word in the vocabulary. The value at matrix[i][j] is the TF-IDF score of word j in document i. The output is often a sparse matrix for efficiency.   
+5. Accept User Query:
+
+Python
+
+# Step 5: Accept user query
+query = input("Enter your search query: ").lower() # Get input and convert to lowercase
+query = input(...): Prompts the user to type their search query and reads the input.
+.lower(): Converts the user's query to lowercase for consistency with the document preprocessing.
+6. Vectorize the Query:
+
+Python
+
+# Step 6: Vectorize the query using the same vectorizer
+# The query must be vectorized using the *same* vocabulary and IDF learned from the documents
+query_vector = vectorizer.transform([query]) # Pass query as a list because transform expects an iterable
+Crucial Point: The search query must be vectorized using the same vectorizer that was fitted on the documents. This ensures that the query vector has the same dimensions (columns correspond to the same vocabulary words) and uses the same IDF values as the document vectors. This makes the query vector comparable to the document vectors.
+vectorizer.transform([query]): Converts the user's input query into a TF-IDF vector using the learned vocabulary and IDFs. The query is passed as a list [query] because the transform method expects an iterable (like a list of documents), even if it's just a single item.
+7. Compute Cosine Similarity:
+
+Python
+
+# Step 7: Compute cosine similarity between the query vector and all document vectors
+cos_similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
+Concept: Cosine Similarity for Relevance: In the Vector Space Model, both the query and each document are represented as vectors in a high-dimensional space (where each dimension is a vocabulary word). The similarity between the query vector and a document vector is often measured by the cosine of the angle between them.
+Cosine Similarity ranges from -1 to 1.
+1 means the vectors are identical in direction (highly similar).
+0 means the vectors are orthogonal (no words/terms in common, no similarity).
+-1 means the vectors are opposite.
+A higher cosine similarity score indicates higher relevance of a document to the query.
+cosine_similarity(query_vector, tfidf_matrix): Computes the cosine similarity. It takes the query vector (1 row) and the TF-IDF matrix (N rows, where N is the number of documents) and returns a 1xN matrix where each value [0][j] is the cosine similarity between the query and document j.
+.flatten(): Converts the 1xN result matrix into a 1-dimensional NumPy array of shape (N,), making it easier to sort the scores. cos_similarities now holds a single list of similarity scores, one for each document.
+8. Rank Documents:
+
+Python
+
+# Step 8: Rank documents based on their similarity score
+# argsort() returns the indices that would sort an array in ascending order
+# [::-1] reverses the indices to get descending order (highest score first)
+top_doc_indices = cos_similarities.argsort()[::-1]
+cos_similarities.argsort(): This NumPy method returns an array of indices that would sort the cos_similarities array in ascending order (lowest similarity first).
+[::-1]: This is a Python slice that reverses a list or array. By applying it to the index array from argsort(), we get the indices sorted in descending order of similarity (highest similarity first). top_doc_indices now contains the original indices of the documents, ordered from most relevant to least relevant.
+9. Display Results:
+
+Python
+
+# Step 9: Display relevant documents in ranked order
+print("\nTop Relevant Documents:")
+for idx in top_doc_indices: # Iterate through document indices in order of relevance
+    score = cos_similarities[idx] # Get the similarity score for this document
+
+    # Only display documents with a similarity score greater than 0
+    # A score of 0 means no shared relevant terms based on TF-IDF
+    if score > 0:
+        print(f"Score: {score:.4f} | Document: {documents[idx]}") # Print score and original document text
+    else:
+        # Once we hit a score of 0 or less, subsequent scores in the ranked list will also be 0 or less
+        print("No more relevant documents.")
+        break # Stop displaying if the score is not positive
+for idx in top_doc_indices:: Loops through the document indices in the order of calculated relevance (from highest similarity to lowest).
+score = cos_similarities[idx]: Retrieves the similarity score for the current document using its index idx.
+if score > 0:: Checks if the similarity score is greater than 0. A score of 0 typically means the document shares no terms with the query that have a non-zero TF-IDF weight. Documents with a score of 0 or less are generally considered not relevant.
+print(...): If the score is positive, it prints the calculated score (formatted to 4 decimal places) and the original text of the document (retrieved from the documents list using the ranked idx).
+else: print(...); break: If the score is 0 or less, it prints a "No more relevant documents" message and breaks out of the loop, as all subsequent documents in the top_doc_indices list will also have scores of 0 or less (since the list is sorted by similarity).

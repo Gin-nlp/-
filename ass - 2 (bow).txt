@@ -1,0 +1,134 @@
+Perform bag-of-words approach (count occurrence, normalized count occurrence), TF-IDF on
+data. Create embeddings using Word2Vec
+
+!pip install nltk scikit-learn genism
+
+import nltk
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from gensim.models import Word2Vec
+from nltk.tokenize import word_tokenize
+
+# tokenizer data for NLTK
+nltk.download('punkt_tab')
+
+Stext = [
+    "Natural Language Processing is amazing!",
+    "I love learning about NLP and AI.",
+    "Word embeddings capture semantic meaning.",
+    "TF-IDF helps in feature extraction.",
+    "Word2Vec creates word embeddings from text."
+]
+
+vectorizer = CountVectorizer()
+bow_matrix = vectorizer.fit_transform(Stext)
+
+print("\n=== Bag-of-Words Representation ===")
+print("Vocabulary:", vectorizer.get_feature_names_out())
+print("BoW Matrix:\n", bow_matrix.toarray())
+
+normalized_bow = bow_matrix.toarray() / np.linalg.norm(bow_matrix.toarray(), axis=1, keepdims=True)
+print("\n=== Normalized Count Occurrence ===")
+print(normalized_bow)
+
+tfidf_vectorizer = TfidfVectorizer()
+tfidf_matrix = tfidf_vectorizer.fit_transform(Stext)
+print("\n=== TF-IDF Representation ===")
+print("Feature Names:", tfidf_vectorizer.get_feature_names_out())
+print("TF-IDF Matrix:\n", tfidf_matrix.toarray())
+
+# Tokenize sentences
+tokenized_text = [word_tokenize(sentence.lower()) for sentence in Stext]
+
+# Train Word2Vec
+word2vec_model = Word2Vec(sentences=tokenized_text, vector_size=10, window=3, min_count=1, workers=4)
+
+# Example: Fetch Word2Vec vector for a word
+word = "love"
+if word in word2vec_model.wv:
+    print(f"\n=== Word2Vec Embedding for '{word}' ===")
+    print(word2vec_model.wv[word])
+
+# Find most similar words to "word"
+print("\n=== Words Similar to 'word' ===")
+print(word2vec_model.wv.most_similar("word", topn=3))
+
+-------------------------------------------------------------------------------------------------------------
+
+3. Bag-of-Words (BoW) - Count Occurrence:
+vectorizer = CountVectorizer()
+bow_matrix = vectorizer.fit_transform(Stext)
+
+print("\n=== Bag-of-Words Representation ===")
+print("Vocabulary:", vectorizer.get_feature_names_out())
+print("BoW Matrix:\n", bow_matrix.toarray())
+Concept: The Bag-of-Words model represents each document (in this case, each sentence) as a vector where each dimension corresponds to a unique word in the entire dataset's vocabulary. The value in each dimension is typically the frequency (count) of that word in the document. It ignores grammar and word order, treating the document as a "bag" of words.
+
+vectorizer = CountVectorizer(): Creates an instance of the CountVectorizer. By default, it tokenizes the text (splits it into words, often lowercasing them and ignoring punctuation) and builds a vocabulary from all unique tokens.
+
+bow_matrix = vectorizer.fit_transform(Stext): This is a two-step process:
+fit(Stext): The vectorizer analyzes the Stext to learn the vocabulary (the unique words) and assign an index to each word.
+
+transform(Stext): The vectorizer then converts the Stext into a numerical matrix based on the learned vocabulary. Each row in the matrix corresponds to a sentence, and each column corresponds to a word in the vocabulary. The value at matrix[i][j] is the count of the j-th word in the i-th sentence. The output is typically a sparse matrix for efficiency.
+
+print("Vocabulary:", vectorizer.get_feature_names_out()): Prints the list of unique words that the vectorizer found and is using as features.
+print("BoW Matrix:\n", bow_matrix.toarray()): Converts the sparse matrix bow_matrix into a dense NumPy array and prints it. You can see the counts of each vocabulary word for each sentence.
+
+4. Normalized Count Occurrence:
+normalized_bow = bow_matrix.toarray() / np.linalg.norm(bow_matrix.toarray(), axis=1, keepdims=True)
+
+print("\n=== Normalized Count Occurrence ===")
+print(normalized_bow)
+
+Concept: Raw word counts can be misleading because longer documents naturally have higher counts for most words. Normalizing the counts helps to address this. A common normalization is L2 normalization, where each document vector is scaled so its Euclidean length (L2 norm) becomes 1. This focuses on the proportion of words rather than the absolute counts, making documents of different lengths more comparable.
+bow_matrix.toarray(): Gets the dense count matrix.
+np.linalg.norm(..., axis=1, keepdims=True): Calculates the L2 norm for each row (axis=1) of the matrix. keepdims=True ensures the result is a column vector, allowing NumPy's broadcasting rules to divide each row of the matrix by the corresponding norm.
+/: Divides the count matrix by the calculated norms. This scales each document vector.
+print(normalized_bow): Prints the matrix with normalized counts.
+
+5. TF-IDF Representation:
+
+tfidf_vectorizer = TfidfVectorizer()
+tfidf_matrix = tfidf_vectorizer.fit_transform(Stext)
+
+print("\n=== TF-IDF Representation ===")
+print("Feature Names:", tfidf_vectorizer.get_feature_names_out())
+print("TF-IDF Matrix:\n", tfidf_matrix.toarray())
+
+Concept: TF-IDF (Term Frequency-Inverse Document Frequency) is another popular method for representing text. It gives higher weight to words that are frequent in a specific document (Term Frequency - TF) but rare across the entire collection of documents (Inverse Document Frequency - IDF). This helps highlight words that are particularly important or distinctive for a document, unlike common words like "the" or "is" which get low TF-IDF scores.
+
+tfidf_vectorizer = TfidfVectorizer(): Creates an instance of TfidfVectorizer. It combines the steps of counting words and applying the TF-IDF weighting scheme.
+tfidf_matrix = tfidf_vectorizer.fit_transform(Stext): Similar to CountVectorizer, this fits the vectorizer to the data (learns vocabulary, calculates IDF values for each word) and then transforms the data into a matrix where values are the TF-IDF scores.
+print("Feature Names:", tfidf_vectorizer.get_feature_names_out()): Prints the vocabulary (features).
+print("TF-IDF Matrix:\n", tfidf_matrix.toarray()): Prints the matrix containing the calculated TF-IDF scores for each word in each sentence.
+
+6. Word Embeddings using Word2Vec:
+# Tokenize sentences for Word2Vec
+tokenized_text = [word_tokenize(sentence.lower()) for sentence in Stext]
+
+# Train Word2Vec
+word2vec_model = Word2Vec(sentences=tokenized_text, vector_size=10, window=3, min_count=1, workers=4)
+
+# Example: Fetch Word2Vec vector for a word
+word = "love"
+if word in word2vec_model.wv:
+    print(f"\n=== Word2Vec Embedding for '{word}' ===")
+    print(word2vec_model.wv[word])
+
+# Find most similar words to "word"
+print("\n=== Words Similar to 'word' ===")
+print(word2vec_model.wv.most_similar("word", topn=3))
+
+Concept: Word embeddings (like Word2Vec) are different from BoW and TF-IDF. Instead of representing documents as vectors based on word counts, they represent individual words as dense vectors in a continuous vector space. These vectors are learned in such a way that words with similar meanings or that appear in similar contexts in the training data have similar vectors (i.e., their vectors are close to each other in the vector space). This captures semantic and syntactic relationships between words.
+
+tokenized_text = [word_tokenize(sentence.lower()) for sentence in Stext]: Word2Vec requires the input data as a list of sentences, where each sentence is a list of words. This line uses NLTK's word_tokenize to split each sentence into words and converts them to lowercase.
+word2vec_model = Word2Vec(...): This line trains the Word2Vec model.
+sentences=tokenized_text: The preprocessed input data.
+vector_size=10: This sets the dimensionality of the word vectors. Each word will be represented by a vector of 10 numbers.
+window=3: This is the context window size. The model considers words within a range of 3 words before and 3 words after the current word to learn relationships.
+min_count=1: Includes words that appear at least once in the vocabulary.
+workers=4: Uses 4 CPU cores for training (if available), speeding up the process.
+word2vec_model.wv: This attribute .wv (for "word vectors") contains the trained word vectors and related methods.
+if word in word2vec_model.wv:: Checks if the word "love" was part of the vocabulary learned by the Word2Vec model.
+print(word2vec_model.wv[word]): If the word is in the vocabulary, this retrieves and prints its 10-dimensional vector embedding.
+print(word2vec_model.wv.most_similar("word", topn=3)): Uses the trained model to find the words whose vectors are most similar (closest in the vector space, typically using cosine similarity) to the vector for the word "word". It prints the top 3 most similar words along with their similarity scores.

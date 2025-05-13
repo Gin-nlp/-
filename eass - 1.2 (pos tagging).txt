@@ -1,0 +1,149 @@
+# Lab Assignment 2: Part-of-Speech (POS) Tagging
+# •	Load a dataset (e.g., news articles or Wikipedia text).
+# •	Use NLTK’s or spaCy’s POS tagger to classify words into parts of speech.
+# •	Analyze the frequency of different POS categories in the text.
+
+# Step 1: Install required libraries
+!pip install nltk spacy
+!python -m spacy download en_core_web_sm
+
+# Step 2: Import Libraries
+import nltk
+import spacy
+from collections import Counter
+import matplotlib.pyplot as plt
+
+# Download NLTK models
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger_eng')
+
+# Load spaCy model
+nlp = spacy.load("en_core_web_sm")
+
+# You can replace this with your own Wikipedia/news content
+text_data = """
+The Eiffel Tower is located in Paris, France. It was constructed in 1889 and attracts millions of tourists every year.
+Albert Einstein developed the theory of relativity. He was one of the greatest scientists in history.
+The COVID-19 pandemic changed the world in many ways, affecting education, economy, and health sectors globally.
+NASA plans to send astronauts to Mars by the 2030s.
+Apple Inc. unveiled its latest iPhone model with advanced camera features and AI capabilities.
+"""
+
+# Option 1: POS Tagging Using spaCy
+
+# POS tagging using spaCy
+doc = nlp(text_data)
+
+# Count POS tags
+pos_counts_spacy = Counter([token.pos_ for token in doc])
+
+# Display frequencies
+print("=== POS Tag Frequency (spaCy) ===")
+for pos, count in pos_counts_spacy.items():
+    print(f"{pos}: {count}")
+
+# Optional: Visualize using matplotlib
+plt.figure(figsize=(10,5))
+plt.bar(pos_counts_spacy.keys(), pos_counts_spacy.values(), color='skyblue')
+plt.title("POS Tag Frequency using spaCy")
+plt.xlabel("POS Tags")
+plt.ylabel("Frequency")
+plt.show()
+
+
+# Option 2: POS Tagging Using NLTK
+from nltk import word_tokenize, pos_tag
+
+# Tokenize and tag using NLTK
+tokens = word_tokenize(text_data)
+pos_tags = pos_tag(tokens)
+
+# Extract tag only (like NN, VB, etc.)
+tag_only = [tag for word, tag in pos_tags]
+pos_counts_nltk = Counter(tag_only)
+
+# Display frequencies
+print("=== POS Tag Frequency (NLTK) ===")
+for tag, count in pos_counts_nltk.items():
+    print(f"{tag}: {count}")
+
+# Optional: Visualize
+plt.figure(figsize=(12,5))
+plt.bar(pos_counts_nltk.keys(), pos_counts_nltk.values(), color='salmon')
+plt.title("POS Tag Frequency using NLTK")
+plt.xlabel("POS Tags")
+plt.ylabel("Frequency")
+plt.xticks(rotation=45)
+plt.show()
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+3. Option 1: POS Tagging Using spaCy
+# POS tagging using spaCy
+doc = nlp(text_data) # Process the entire text using the spaCy model
+
+# Count POS tags
+# Iterate through tokens in the processed doc and get their universal POS tags (.pos_)
+pos_counts_spacy = Counter([token.pos_ for token in doc])
+
+# Display frequencies
+print("=== POS Tag Frequency (spaCy) ===")
+for pos, count in pos_counts_spacy.items():
+    print(f"{pos}: {count}")
+
+# Optional: Visualize using matplotlib
+plt.figure(figsize=(10,5)) # Create a figure for the plot
+# Create a bar chart with POS tags as x-axis labels and their counts as y-axis values
+plt.bar(pos_counts_spacy.keys(), pos_counts_spacy.values(), color='skyblue')
+plt.title("POS Tag Frequency using spaCy") # Set plot title
+plt.xlabel("POS Tags") # Set x-axis label
+plt.ylabel("Frequency") # Set y-axis label
+plt.show() # Display the plot
+Concept: spaCy provides an integrated pipeline. When you process text with nlp(text_data), it automatically performs tokenization, POS tagging, and other steps. spaCy assigns tags from a universal tag set (e.g., NOUN, VERB, ADJ) which are consistent across languages and simpler than more granular tag sets.
+doc = nlp(text_data): Processes the input text_data using the loaded spaCy model. This returns a Doc object, which contains the processed text and gives access to its tokens and their attributes (like POS tags).
+[token.pos_ for token in doc]: This is a list comprehension. It iterates through each token in the doc object and retrieves its universal POS tag using the .pos_ attribute. This creates a list of universal POS tags for every token in the text.
+pos_counts_spacy = Counter(...): Creates a Counter object from the list of spaCy POS tags. Counter automatically counts how many times each unique tag appears.
+print(...): Prints a header and then iterates through the pos_counts_spacy Counter to print each unique POS tag and its corresponding count.
+Visualization: The matplotlib code creates a bar chart where each bar represents a POS tag, and the height of the bar indicates its frequency in the text as counted by spaCy.
+
+
+4. Option 2: POS Tagging Using NLTK
+
+Python
+
+from nltk import word_tokenize, pos_tag # Import specific NLTK functions
+
+# Tokenize and tag using NLTK
+tokens = word_tokenize(text_data) # Tokenize the text first
+pos_tags = pos_tag(tokens) # Apply POS tagging to the list of tokens
+
+# Extract tag only (NLTK uses a more granular tag set, like NN, VB, JJ, NNP, etc.)
+# pos_tag returns a list of (word, tag) tuples. We only want the tag.
+tag_only = [tag for word, tag in pos_tags]
+pos_counts_nltk = Counter(tag_only) # Count the frequency of each NLTK tag
+
+# Display frequencies
+print("=== POS Tag Frequency (NLTK) ===")
+for tag, count in pos_counts_nltk.items():
+    print(f"{tag}: {count}")
+
+# Optional: Visualize
+plt.figure(figsize=(12,5)) # Create another figure
+# Create a bar chart for NLTK frequencies
+plt.bar(pos_counts_nltk.keys(), pos_counts_nltk.values(), color='salmon')
+plt.title("POS Tag Frequency using NLTK") # Set plot title
+plt.xlabel("POS Tags") # Set x-axis label
+plt.ylabel("Frequency") # Set y-axis label
+plt.xticks(rotation=45) # Rotate x-axis labels for better readability as NLTK tags are more numerous
+plt.show() # Display the plot
+Concept: NLTK's approach is more modular. You typically tokenize first and then pass the tokens to the tagger. NLTK often uses a more granular tag set (e.g., 'NN' for singular noun, 'NNS' for plural noun, 'VB' for base verb, 'VBD' for past tense verb, 'VBG' for gerund/present participle, etc.) which provides more detail than spaCy's universal tags.
+from nltk import word_tokenize, pos_tag: Imports the necessary NLTK functions.
+tokens = word_tokenize(text_data): Tokenizes the input text_data into a list of words using NLTK's tokenizer.
+pos_tags = pos_tag(tokens): Applies NLTK's POS tagger (pos_tag) to the list of tokens. It returns a list where each item is a tuple (word, tag).
+tag_only = [tag for word, tag in pos_tags]: This list comprehension iterates through the list of (word, tag) tuples and extracts just the tag string from each tuple, creating a list of only the NLTK POS tags.
+pos_counts_nltk = Counter(tag_only): Creates a Counter object to count the frequency of each unique NLTK POS tag in the list.
+print(...): Prints a header and then iterates through the pos_counts_nltk Counter to print each unique NLTK tag and its count.
+Visualization: The matplotlib code creates a second bar chart for the NLTK POS tag frequencies. plt.xticks(rotation=45) is added to rotate the x-axis labels because the NLTK tag set is typically larger than the universal set, and the labels might overlap horizontally.

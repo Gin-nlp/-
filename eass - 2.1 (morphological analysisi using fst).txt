@@ -1,0 +1,167 @@
+# Lab Assignment 3: Morphological Analysis using Finite State Transducers (FST)
+# •	Implement morphological parsing using a Finite State Transducer (FST).
+# •	Take a list of words and break them into their morphemes (root, affix, suffix).
+# •	Example: running → run + ing, happier → happy + er.
+
+import re
+
+# Sample input list of words
+words = ['running', 'played', 'happier', 'fastest', 'talks', 'unhappy', 'redo', 'kindness']
+
+# Define suffixes and prefixes
+suffixes = ['ing', 'ed', 'er', 'est', 's', 'ness']
+prefixes = ['un', 're', 'in', 'dis']
+
+# Root word dictionary (mock - can be extended)
+root_words = ['run', 'play', 'happy', 'fast', 'talk', 'do', 'kind']
+
+# Function to simulate FST-based morphological parsing
+def morphological_parser(word):
+    parsed = []
+
+    # Step 1: Check for prefix
+    prefix_found = ''
+    for prefix in prefixes:
+        if word.startswith(prefix):
+            prefix_found = prefix
+            word = word[len(prefix):]
+            parsed.append(prefix_found)
+            break
+
+    # Step 2: Check for suffix
+    suffix_found = ''
+    for suffix in suffixes:
+        if word.endswith(suffix):
+            suffix_found = suffix
+            stem_candidate = word[:-len(suffix)]
+            if stem_candidate in root_words:
+                parsed.append(stem_candidate)
+                parsed.append(suffix_found)
+                return ' + '.join(parsed)
+            else:
+                word = stem_candidate
+                parsed.append(stem_candidate)
+                parsed.append(suffix_found)
+                return ' + '.join(parsed)
+
+    # Step 3: If no affix matched, check if it's a root word
+    if word in root_words:
+        parsed.append(word)
+    else:
+        parsed.append("[unknown-root: " + word + "]")
+
+    return ' + '.join(parsed)
+
+# Apply parser to all words
+print("Morphological Analysis using FST\n")
+for w in words:
+    result = morphological_parser(w)
+    print(f"{w} → {result}")
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+import re: Imports the regular expression module, but this specific script does not actually use any regex functions.
+words: This is the list of example words that the script will attempt to parse into their component morphemes (root, prefixes, suffixes).
+suffixes and prefixes: These lists define the specific suffixes and prefixes that the simulated parser is programmed to recognize.
+root_words: This list acts as a small, mock lexicon of known valid root words. A real morphological parser would use a much larger and more comprehensive lexicon.
+
+
+2. The Morphological Parser Function (morphological_parser):
+# Function to simulate FST-based morphological parsing
+def morphological_parser(word):
+    parsed = [] # List to store the morphemes found
+
+    # Step 1: Check for prefix
+    prefix_found = ''
+    for prefix in prefixes: # Iterate through the defined prefixes
+        if word.startswith(prefix): # Check if the word starts with the current prefix
+            prefix_found = prefix # Store the found prefix
+            word = word[len(prefix):] # **Important:** Remove the prefix from the word. The next steps operate on the remainder.
+            parsed.append(prefix_found) # Add the found prefix to the result list
+            break # **Important:** Stop checking prefixes after the first match (simplification)
+
+    # Step 2: Check for suffix
+    suffix_found = ''
+    for suffix in suffixes: # Iterate through the defined suffixes
+        # Check if the *current* state of the word (after prefix removal) ends with the suffix
+        if word.endswith(suffix):
+            suffix_found = suffix # Store the found suffix
+            # Create a candidate for the stem/root by removing the suffix
+            stem_candidate = word[:-len(suffix)]
+
+            # This check simulates looking up the stem in a lexicon
+            if stem_candidate in root_words:
+                # If the stem is a known root, add it and the suffix, and we're done with this word
+                parsed.append(stem_candidate)
+                parsed.append(suffix_found)
+                return ' + '.join(parsed) # Return the joined morphemes immediately
+
+            else: # If the stem candidate is NOT a known root (based on the mock list)
+                # This part of the original code seems to repeat the logic of adding the stem/suffix and returning.
+                # In a real system, you might try other suffixes or mark the root as unknown.
+                # As written, it adds the *unknown* stem candidate and the suffix and returns.
+                parsed.append(stem_candidate) # Add the stem candidate (even if unknown)
+                parsed.append(suffix_found) # Add the suffix
+                return ' + '.join(parsed) # Return the joined morphemes immediately
+
+    # Step 3: If no prefix or suffix matched from the lists above, check if the remaining part is a root word
+    if word in root_words:
+        parsed.append(word) # If it's a known root, add it
+    else:
+        # If the remaining part is not in the root_words list, mark it as an unknown root
+        parsed.append("[unknown-root: " + word + "]")
+
+    return ' + '.join(parsed) # Join all found morphemes with ' + ' and return
+Purpose: This function takes a single word and attempts to break it down into its components based on the predefined prefixes, suffixes, and root_words list. It simulates the process of traversing states in an FST.
+parsed = []: Initializes an empty list that will store the morphemes (parts) found as the parser processes the word.
+Step 1: Check for Prefix:
+It loops through the prefixes list.
+word.startswith(prefix): Checks if the input word starts with the current prefix.
+If a match is found (if word.startswith(...)):
+word = word[len(prefix):]: The matching prefix is removed from the beginning of the word. This is the crucial step that simulates moving from a state where the prefix is consumed to a new state with the remaining string.
+parsed.append(prefix_found): The identified prefix is added to the parsed list.
+break: The loop stops after finding the first matching prefix. This is a simplification; a real FST might explore paths for multiple potential prefixes or the longest match.
+Step 2: Check for Suffix:
+It loops through the suffixes list.
+word.endswith(suffix): Checks if the current state of the word (which might be shorter if a prefix was removed) ends with the current suffix.
+If a suffix match is found (if word.endswith(...)):
+stem_candidate = word[:-len(suffix)]: The suffix is removed from the end of the word to get a candidate for the root/stem.
+if stem_candidate in root_words:: This is a key decision point. It checks if the derived stem_candidate exists in the predefined root_words list (the mock lexicon). This simulates a transition in an FST that requires a valid lexicon entry for the root.
+If the stem is a known root, it appends the root and the suffix to the parsed list and immediately returns the joined string.
+If the stem is not a known root (the else block), the original code adds the unknown stem and the suffix and returns immediately. This part is a simplification and might not be how a robust parser would handle unknown stems after finding a suffix.
+Step 3: Handle Base Word or Unknown:
+This block is reached only if the function hasn't already returned in Step 2 (meaning no suffix from the list was found on the word or its prefix-stripped form).
+if word in root_words:: It checks if the remaining word is a direct match in the root_words list (e.g., if the input was "run").
+If it is a known root, it's added to the parsed list.
+If it's not in the root_words list, it's marked as an "[unknown-root: ...]" and added to the parsed list.
+return ' + '.join(parsed): Finally, all the identified parts in the parsed list are joined together with " + " and returned as a single string representing the morphological analysis.
+How this relates to FSTs:
+
+This code simulates the logic of a simple FST, although it's implemented using sequential if/elif checks and string manipulation rather than building an explicit state graph.
+
+States: You can think of the different points in the function as states:
+Initial State (checking for prefixes).
+State after removing a prefix (checking for suffixes on the remainder).
+State after removing a suffix (checking if the remainder is a valid root in the lexicon).
+Final State (successfully parsed or marked as unknown).
+Transitions: The if conditions (startswith, endswith, in root_words) and the string slicing (word[len(prefix):], word[:-len(suffix)]) simulate the transitions. A match triggers a transition to the next implicit state and potentially adds a morpheme to the output (parsed list).
+Input/Output: The input is the word, and the output is the string of morphemes joined by " + ". FSTs are transducers because they transform input strings to output strings.
+Lexicon: The root_words list simulates the role of a lexicon that an FST would use to validate possible root forms.
+
+3. Applying the Parser:
+# Apply parser to all words in the list
+print("Morphological Analysis using FST\n")
+for w in words: # Loop through each word in the sample list
+    result = morphological_parser(w) # Call the parser function
+    print(f"{w} → {result}") # Print the original word and its parsed result
+This loop simply iterates through the words list, calls the morphological_parser function for each word, and prints the original word followed by its parsed output in the format "word → parsed_morphemes".
+Limitations of this simulation compared to real FSTs:
+
+Sequential, Not Parallel: Real FSTs can explore multiple possible parses simultaneously (non-determinism), backtracking if a path fails. This code checks for one prefix, then one suffix, and stops as soon as a root + suffix combination (or just a suffix resulting in any stem) is found.
+Limited Rules: Only the explicitly listed prefixes/suffixes are handled.
+Simplified Lexicon Check: The root_words list is very small.
+Doesn't Handle Inflectional Changes: It doesn't handle common changes at morpheme boundaries (e.g., "happy" + "er" -> "happier" involves a 'y' to 'i' change, "run" + "ing" -> "running" involves doubling the 'n'). The code would need more complex logic to handle these. The current code would parse "happier" as "happi" + "er" if "happi" isn't in root_words, or potentially "happy" + "er" if the endswith('er') is checked before endswith('ier') in a more advanced version. As written, it removes 'er' first from 'happier' yielding 'happi'. 'happi' is not in root_words. So it would go to the else in Step 2, add 'happi' and 'er', and return "happi + er".
+No Formal States: The states are implicit in the code's flow, not explicitly defined in a state machine structure.

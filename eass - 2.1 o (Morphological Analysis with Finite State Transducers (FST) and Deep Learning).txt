@@ -1,0 +1,361 @@
+# Lab Assignment 3: Morphological Analysis with Finite State Transducers (FST) and Deep Learning
+# •	Implement a Finite State Transducer (FST) for morphological parsing (e.g., handling verb conjugations and noun declensions in an Indian language like Hindi or Sanskrit).
+# •	Train a sequence-to-sequence deep learning model (LSTM-based) to predict morphemes for unseen words.
+# •	Compare performance between FST and deep learning approaches.
+
+# Step 1 - Install Dependencies
+!pip install nltk torch torchtext matplotlib --quiet
+
+# Step 2: FST-Based Morphological Parser (Simple Demo)
+def fst_morphological_parser(word):
+    # Basic rule-based transducer
+    rules = {
+        'ing': '',     # running -> run
+        'ed': '',      # jumped -> jump
+        's': '',       # dogs -> dog
+        'er': '',      # taller -> tall
+    }
+
+    for suffix, root_suffix in rules.items():
+        if word.endswith(suffix):
+            return word[:-len(suffix)] + root_suffix, suffix
+    return word, ''  # no transformation
+
+# Test FST
+words = ['running', 'jumped', 'dogs', 'taller', 'run']
+print("FST Morphological Analysis:")
+for word in words:
+    root, suffix = fst_morphological_parser(word)
+    print(f"{word} -> root: {root}, suffix: {suffix}")
+
+# Step 3: Sequence-to-Sequence Model (LSTM) for Morpheme Prediction
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, Dataset
+from torch.nn.utils.rnn import pad_sequence
+
+
+# Create toy dataset
+dataset = [
+    ('running', 'run ing'),
+    ('jumped', 'jump ed'),
+    ('taller', 'tall er'),
+    ('dogs', 'dog s'),
+    ('played', 'play ed'),
+]
+
+
+# Character-level tokenizer
+def tokenize(word):
+    return list(word)
+
+
+# Vocabulary
+all_chars = sorted(set("".join(w for w, _ in dataset) + " ".join(m for _, m in dataset)))
+char2idx = {c: i + 1 for i, c in enumerate(all_chars)}  # +1 to reserve 0 for padding
+idx2char = {i: c for c, i in char2idx.items()}
+
+
+# Encoding
+def encode(seq):
+    return torch.tensor([char2idx[c] for c in seq], dtype=torch.long)
+class MorphDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        src, tgt = self.data[idx]
+        return encode(tokenize(src)), encode(tokenize(tgt))
+
+def collate_fn(batch):
+    srcs, tgts = zip(*batch)
+    srcs = pad_sequence(srcs, batch_first=True)
+    tgts = pad_sequence(tgts, batch_first=True)
+    return srcs, tgts
+
+train_loader = DataLoader(MorphDataset(dataset), batch_size=2, shuffle=True, collate_fn=collate_fn)
+
+# Seq2Seq model with LSTM
+class Seq2Seq(nn.Module):
+    def __init__(self, vocab_size, embed_size=32, hidden_size=64):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size + 1, embed_size, padding_idx=0)
+        self.encoder = nn.LSTM(embed_size, hidden_size, batch_first=True)
+        self.decoder = nn.LSTM(embed_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, vocab_size + 1)
+
+    def forward(self, src, tgt):
+        embedded_src = self.embed(src)
+        _, (h, c) = self.encoder(embedded_src)
+
+        embedded_tgt = self.embed(tgt)
+        out, _ = self.decoder(embedded_tgt, (h, c))
+        logits = self.fc(out)
+        return logits
+
+# Training
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = Seq2Seq(len(char2idx)).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+loss_fn = nn.CrossEntropyLoss(ignore_index=0)
+
+EPOCHS = 20
+for epoch in range(EPOCHS):
+    model.train()
+    total_loss = 0
+    for src, tgt in train_loader:
+        src, tgt = src.to(device), tgt.to(device)
+        output = model(src, tgt[:, :-1])
+        loss = loss_fn(output.view(-1, output.size(-1)), tgt[:, 1:].reshape(-1))
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+
+
+
+# Step 4: Evaluate the LSTM Morphological Analyzer
+def predict(model, word):
+    model.eval()
+    with torch.no_grad():
+        src = encode(tokenize(word)).unsqueeze(0).to(device)
+        embedded_src = model.embed(src)
+        _, (h, c) = model.encoder(embedded_src)
+
+        input_tgt = torch.tensor([[char2idx[' ']]], device=device)
+        output_seq = []
+
+        for _ in range(15):  # max output length
+            embedded_tgt = model.embed(input_tgt)
+            out, (h, c) = model.decoder(embedded_tgt, (h, c))
+            logits = model.fc(out[:, -1, :])
+            predicted = logits.argmax(dim=-1)
+            char = idx2char.get(predicted.item(), '')
+            if char == '':
+                break
+            output_seq.append(char)
+            input_tgt = predicted.unsqueeze(0)
+        return ''.join(output_seq)
+
+
+# Test prediction
+test_words = ['running', 'taller', 'dogs']
+print("\nLSTM Predictions:")
+for word in test_words:
+    print(f"{word} -> {predict(model, word)}")
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+Concept: A Finite State Transducer (FST) for morphology maps the "surface form" of a word (how it appears) to its "lexical form" (its underlying morphemes). This section simulates a very basic FST using simple rule-based string manipulation.
+fst_morphological_parser(word): This function takes a single word as input.
+rules = {...}: This dictionary defines the transformation rules. The keys are suffixes to look for, and the values (root_suffix) are what the suffix should be replaced with in the root (here, all are '' meaning the suffix is just removed). This is a highly simplified representation of FST rules. A real FST would have explicit states and transitions based on characters and would handle complex spell-change rules (like 'y' to 'i' or doubling consonants).
+for suffix, root_suffix in rules.items():: The code iterates through these rules.
+if word.endswith(suffix):: It checks if the input word ends with the current suffix from the rules.
+return word[:-len(suffix)] + root_suffix, suffix: If a suffix is found, it performs the transformation: it takes the part of the word before the suffix (word[:-len(suffix)]) and appends the root_suffix (which is empty in this example, effectively just removing the suffix). It then immediately returns the resulting root and the suffix it found. Important: This means it applies only the first matching suffix it finds based on the order of the rules dictionary.
+return word, '': If the loop finishes without finding any matching suffix, the original word is returned as the root, and the suffix is an empty string.
+Test FST: This loop applies the fst_morphological_parser to the sample words and prints the output. You'll see it correctly stems words like "running", "jumped", "dogs", "taller" by removing the suffix based on the rules. It handles "run" correctly because no suffix matches.
+3. Sequence-to-Sequence Model (LSTM) for Morpheme Prediction:
+
+This section builds and trains a deep learning model to perform a similar task. It's trained end-to-end to map a word (as a sequence of characters) to its morpheme breakdown (also as a sequence of characters, including spaces).
+
+Python
+
+# Step 3: Sequence-to-Sequence Model (LSTM) for Morpheme Prediction
+import torch
+import torch.nn as nn # Neural network module
+from torch.utils.data import DataLoader, Dataset # For handling data batches
+from torch.nn.utils.rnn import pad_sequence # To pad sequences in a batch
+
+# Create toy dataset: input word -> target morphemes (space separated)
+dataset = [
+    ('running', 'run ing'),
+    ('jumped', 'jump ed'),
+    ('taller', 'tall er'),
+    ('dogs', 'dog s'),
+    ('played', 'play ed'),
+    # This small dataset is used to train the DL model
+]
+
+# Character-level tokenizer: just splits the word into a list of characters
+def tokenize(word):
+    return list(word)
+
+# Vocabulary: maps characters to indices and vice versa
+# Builds a set of all unique characters in the input words and target morpheme strings
+all_chars = sorted(set("".join(w for w, _ in dataset) + " ".join(m for _, m in dataset)))
+char2idx = {c: i + 1 for i, c in enumerate(all_chars)}  # +1 to reserve 0 for padding
+idx2char = {i: c for c, i in char2idx.items()} # Reverse mapping from index to character
+
+# Encoding function: converts a sequence of characters to a tensor of indices
+def encode(seq):
+    return torch.tensor([char2idx[c] for c in seq], dtype=torch.long)
+
+# Custom PyTorch Dataset class
+class MorphDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self): # Returns the number of samples
+        return len(self.data)
+
+    def __getitem__(self, idx): # Returns a single sample by index
+        src, tgt = self.data[idx] # Get the source (input word) and target (output morphemes)
+        return encode(tokenize(src)), encode(tokenize(tgt)) # Encode both using the char2idx mapping
+
+# Custom collate function for DataLoader to handle padding
+def collate_fn(batch):
+    srcs, tgts = zip(*batch) # Separate source and target sequences in the batch
+    # Pad sequences to the length of the longest sequence in the batch, using 0 as padding index
+    srcs = pad_sequence(srcs, batch_first=True, padding_value=0)
+    tgts = pad_sequence(tgts, batch_first=True, padding_value=0)
+    return srcs, tgts
+
+# DataLoader: prepares data for training in batches
+train_loader = DataLoader(MorphDataset(dataset), batch_size=2, shuffle=True, collate_fn=collate_fn)
+
+# Seq2Seq model definition using LSTMs
+class Seq2Seq(nn.Module):
+    def __init__(self, vocab_size, embed_size=32, hidden_size=64):
+        super().__init__()
+        # Embedding layer: converts character indices into dense vectors
+        self.embed = nn.Embedding(vocab_size + 1, embed_size, padding_idx=0) # vocab_size + 1 for padding index 0
+        # Encoder LSTM: processes the input word sequence
+        self.encoder = nn.LSTM(embed_size, hidden_size, batch_first=True)
+        # Decoder LSTM: generates the output morpheme sequence
+        self.decoder = nn.LSTM(embed_size, hidden_size, batch_first=True)
+        # Final linear layer: maps LSTM output to prediction scores for each character
+        self.fc = nn.Linear(hidden_size, vocab_size + 1) # vocab_size + 1 for predicting index 0 (padding)
+
+    def forward(self, src, tgt): # Forward pass during training
+        # src: input word batch (encoded indices)
+        # tgt: target morphemes batch (encoded indices) - used for Teacher Forcing
+
+        embedded_src = self.embed(src) # Embed the input source sequence
+        _, (h, c) = self.encoder(embedded_src) # Pass through encoder, get final hidden and cell states
+
+        embedded_tgt = self.embed(tgt) # Embed the target sequence
+        # Pass through decoder, initialized with encoder's final states
+        # out contains output features for each time step
+        out, _ = self.decoder(embedded_tgt, (h, c))
+
+        # Apply linear layer to decoder output to get logits (raw scores) for each character
+        logits = self.fc(out)
+        return logits
+
+# Training the model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
+model = Seq2Seq(len(char2idx)).to(device) # Instantiate model and move to device
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01) # Optimizer (Adam)
+# Loss function: Cross Entropy Loss for classification (predicting character index)
+loss_fn = nn.CrossEntropyLoss(ignore_index=0) # Ignore padding index (0) in loss calculation
+
+EPOCHS = 20 # Number of training epochs
+print("\nTraining LSTM Model:")
+for epoch in range(EPOCHS):
+    model.train() # Set model to training mode
+    total_loss = 0
+    for src, tgt in train_loader: # Iterate through batches from the DataLoader
+        src, tgt = src.to(device), tgt.to(device) # Move data to the selected device
+
+        # Forward pass: Predict the output sequence
+        # Use Teacher Forcing: input the actual target sequence (shifted) to the decoder
+        # tgt[:, :-1] are the input tokens for the decoder (exclude the last token)
+        output = model(src, tgt[:, :-1]) # output shape: (batch_size, sequence_length, vocab_size+1)
+
+        # Calculate loss: Compare model's predictions with the actual next tokens
+        # output.view(-1, output.size(-1)): reshape predictions to (batch_size * sequence_length, vocab_size+1)
+        # tgt[:, 1:].reshape(-1): reshape actual next tokens to a flat list (batch_size * sequence_length). Exclude the first token.
+        loss = loss_fn(output.view(-1, output.size(-1)), tgt[:, 1:].reshape(-1))
+
+        optimizer.zero_grad() # Clear gradients from previous step
+        loss.backward() # Calculate gradients
+        optimizer.step() # Update model weights
+
+        total_loss += loss.item() # Accumulate loss
+
+    print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}") # Print loss per epoch
+Concept: This implements a common neural network architecture (Seq2Seq) for transforming one sequence (input word characters) into another sequence (output morpheme characters). It uses LSTMs (Long Short-Term Memory networks), which are good at handling sequential data.
+dataset: A small list of pairs (input_word, desired_output_morpheme_string). This is the training data. The model learns to map the characters of the input word to the characters of the space-separated morphemes in the output string.
+tokenize, all_chars, char2idx, idx2char, encode: These functions handle converting words and morpheme strings into numerical representations (sequences of character indices) that the neural network can process. Index 0 is reserved for padding.
+MorphDataset, collate_fn, DataLoader: Standard PyTorch components for managing the data. MorphDataset defines how to get individual samples. collate_fn is crucial for padding sequences within a batch to the same length, which is necessary for efficient tensor operations in the neural network. DataLoader iterates over the dataset in batches, shuffles, and applies collate_fn.
+Seq2Seq(nn.Module): Defines the neural network architecture.
+nn.Embedding: Converts character indices into dense vectors.
+encoder = nn.LSTM(...): An LSTM layer that reads the input word sequence and compresses its information into a final hidden state and cell state.
+decoder = nn.LSTM(...): An LSTM layer that takes the encoder's final state as its initial state and generates the output sequence character by character.
+fc = nn.Linear(...): A fully connected layer that maps the decoder's output at each time step to a probability distribution over the vocabulary characters.
+forward(self, src, tgt): Defines how data flows through the network during training. It uses Teacher Forcing, meaning the decoder is shown the actual correct output sequence (shifted by one position) as input to help it learn.
+Training Loop: Standard PyTorch training loop. It iterates for a fixed number of EPOCHS, processes data in batches from the train_loader, performs a forward pass, calculates the loss (Cross Entropy Loss because it's predicting one character out of many possible characters at each step), calculates gradients (loss.backward()), and updates model weights (optimizer.step()). ignore_index=0 in CrossEntropyLoss ensures that the loss calculation ignores the padding tokens.
+4. Evaluate the LSTM Morphological Analyzer:
+
+Python
+
+# Step 4: Evaluate the LSTM Morphological Analyzer (Prediction)
+def predict(model, word):
+    model.eval() # Set model to evaluation mode (disables dropout, etc.)
+    with torch.no_grad(): # Disable gradient calculations for inference
+        # Prepare input: encode, add batch dimension (unsqueeze), move to device
+        src = encode(tokenize(word)).unsqueeze(0).to(device)
+
+        # Encode the input word to get the final encoder states (h, c)
+        embedded_src = model.embed(src)
+        _, (h, c) = model.encoder(embedded_src) # We only need the final states
+
+        # Initialize decoder input: Start with the index for a space character ' '
+        # This space acts as a 'start of sequence' token for the output format "root space suffix"
+        input_tgt = torch.tensor([[char2idx[' ']]], device=device)
+
+        output_seq = [] # List to collect predicted characters
+
+        # Auto-regressive decoding loop: Generate output character by character
+        for _ in range(15): # Limit max output length to 15 characters
+            # Pass the *previously predicted* character (or initial space) through the decoder
+            embedded_tgt = model.embed(input_tgt)
+            out, (h, c) = model.decoder(embedded_tgt, (h, c)) # Update decoder states
+
+            # Get logits for the *last* time step of the decoder's output
+            logits = model.fc(out[:, -1, :])
+
+            # Get the index with the highest logit (the predicted character index)
+            predicted = logits.argmax(dim=-1)
+
+            # Convert predicted index back to character
+            char = idx2char.get(predicted.item(), '') # Use get with default '' to handle potential unknown indices
+
+            # Stop if the predicted character is the empty string (acts like an end-of-sequence marker here)
+            if char == '':
+                break
+
+            output_seq.append(char) # Add predicted character to the output list
+
+            # The predicted character becomes the input for the *next* step of the decoder
+            input_tgt = predicted.unsqueeze(0)
+
+        return ''.join(output_seq) # Join the predicted characters into a string
+
+# Test prediction with unseen data (or data seen during training)
+test_words = ['running', 'taller', 'dogs']
+print("\nLSTM Predictions:")
+for word in test_words:
+    print(f"{word} -> {predict(model, word)}")
+Concept: This function shows how to use the trained LSTM model to generate a morpheme breakdown for a new word. Unlike training (which uses Teacher Forcing), prediction is autoregressive or greedy decoding: the model predicts one character, and that predicted character is then fed back as input to the decoder for the next time step.
+model.eval(), with torch.no_grad():: Sets the model to evaluation mode and disables gradient calculation, which is standard practice for inference.
+src = encode(...): Encodes the input word, adds a batch dimension (because the model expects batches), and moves it to the device.
+_, (h, c) = model.encoder(embedded_src): Runs the input through the encoder to get the initial hidden states for the decoder.
+input_tgt = torch.tensor([[char2idx[' ']]], device=device): Initializes the decoder's input sequence with the index of the space character. This is a clever trick here; the model is trained to produce outputs like "root space suffix", so starting the decoder with a space helps it generate the first morpheme.
+for _ in range(15):: A loop that runs for a maximum number of steps (here, 15) to generate the output sequence character by character.
+Inside the loop: The decoder takes the input_tgt (initially space, then previous prediction), updates its state, and outputs logits for the next character. argmax picks the most likely character index. This index is converted back to a character, added to output_seq, and then becomes the input_tgt for the next iteration. The loop breaks if an empty string (which acts like an end-of-sequence signal here, though a specific EOS token is more standard) is predicted or the max length is reached.
+Comparison (Based on the code's implementation):
+
+FST: Simple rules, deterministic, fast for known patterns, fails completely or gives incorrect results for words/morphology outside its defined rules. Doesn't require data for training (just rules and a lexicon). Handles spell changes only if explicitly coded into the rules.
+Deep Learning (LSTM): Learns patterns from data, can potentially generalize to unseen words or variations if the training data is sufficiently large and diverse. Requires a significant amount of labeled data for training. The "rules" are implicit in the learned weights. Can potentially handle complex, non-obvious relationships and spell changes if trained on relevant examples.
+Limitations of the Code for the Prompt's Goal:
+
+Language: Uses English, which has relatively simple morphology compared to Hindi or Sanskrit. The complexity of implementing rules or training a DL model increases significantly for morphologically richer languages.
+Dataset Size: The DL model is trained on only 5 examples. This is far too little data for an LSTM to learn meaningful patterns; its predictions on unseen words will likely be poor.
+Performance Comparison: The code doesn't include metrics (like accuracy) to objectively compare the two approaches.

@@ -1,0 +1,137 @@
+import nltk
+import random
+from collections import defaultdict, Counter
+from nltk.util import ngrams
+from nltk.tokenize import word_tokenize
+
+nltk.download('punkt')
+nltk.download('punkt_tab')
+
+sample = """
+    The quick brown fox jumps over the lazy dog. The quick brown fox is fast.
+    A lazy dog sleeps all day. The quick fox is clever and fast.
+"""
+
+tokens = word_tokenize(sample.lower())
+
+
+n = 3
+ngrams_list = list(ngrams(tokens, n))
+ngram_freq = Counter(ngrams_list)
+
+
+
+model = defaultdict(lambda: Counter())
+for ngram in ngrams_list:
+    prefix, next_word = tuple(ngram[:-1]), ngram[-1]
+    model[prefix][next_word] += 1
+
+# Normalize to get probabilities
+def get_next_word_probabilities(prefix):
+    next_word_counts = model[prefix]
+    total_count = sum(next_word_counts.values())
+    return {word: count / total_count for word, count in next_word_counts.items()}
+
+
+
+def predict_next_word(text, top_n=3):
+    words = word_tokenize(text.lower())
+    prefix = tuple(words[-(n-1):])
+    next_word_probs = get_next_word_probabilities(prefix)
+
+    if not next_word_probs:
+        return ["No prediction available"]
+
+
+    return sorted(next_word_probs.items(), key=lambda x: x[1], reverse=True)[:top_n]
+
+
+
+user_input = "brown fox jumps"
+predictions = predict_next_word(user_input)
+print(f"Input: '{user_input}'")
+print("Predictions:", predictions)
+
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+tokens = word_tokenize(sample.lower()) # Tokenize and lowercase the sample text
+sample: Defines the string containing the text data that our N-gram model will learn from.
+tokens = word_tokenize(sample.lower()): This is a preprocessing step.
+sample.lower(): Converts all characters in the sample text to lowercase. This ensures that, for example, "The" and "the" are treated as the same word.
+word_tokenize(...): Splits the lowercased text into a list of individual words (tokens). The punkt data helps this function handle punctuation correctly.
+
+3. N-gram Generation:
+n = 3 # Define the size of the N-grams (trigrams)
+ngrams_list = list(ngrams(tokens, n)) # Generate N-grams from the tokens
+ngram_freq = Counter(ngrams_list) # Count the frequency of each N-gram (calculated but not directly used for prediction model)
+n = 3: Sets the "N" in N-gram to 3. This means we will be looking at sequences of 3 consecutive words (trigrams). A model with n=3 predicts the next word based on the two preceding words.
+ngrams_list = list(ngrams(tokens, n)): Generates all possible sequences of n tokens from the tokens list. For n=3, this produces trigrams like ('the', 'quick', 'brown'), ('quick', 'brown', 'fox'), etc. ngrams() returns an iterator, so list() is used to convert it into a list of tuples.
+ngram_freq = Counter(ngrams_list): Creates a Counter object which is like a dictionary where keys are the N-grams and values are their counts in the text. While calculated, this Counter isn't directly used to build the prediction model in the next step, which uses a different structure focused on prefixes.
+
+4. Building the N-gram Prediction Model:
+model = defaultdict(lambda: Counter()) # Initialize a dictionary to store the model
+
+for ngram in ngrams_list:
+    prefix, next_word = tuple(ngram[:-1]), ngram[-1] # Split N-gram into prefix (first n-1 words) and next word (last word)
+    model[prefix][next_word] += 1 # Increment the count for the next word given the prefix
+model = defaultdict(lambda: Counter()): This is where the language model structure is created.
+defaultdict: A dictionary-like class where if you try to access a key that doesn't exist, it automatically creates it with a default value specified by the factory function.
+lambda: Counter(): The factory function is a lambda that returns a new, empty Counter object. So, if you access model[some_prefix] and some_prefix isn't already a key, defaultdict creates model[some_prefix] = Counter().
+for ngram in ngrams_list:: The code iterates through each (word1, word2, word3) trigram.
+prefix, next_word = tuple(ngram[:-1]), ngram[-1]: For a trigram (w1, w2, w3):
+ngram[:-1] takes all elements except the last one, resulting in (w1, w2). tuple(...) ensures it's a tuple, which can be a dictionary key. This is the prefix.
+ngram[-1] takes the last element, which is w3. This is the next_word.
+model[prefix][next_word] += 1: This is the core learning step. It looks up the prefix tuple (w1, w2) in the model dictionary. Since model is a defaultdict(Counter), if (w1, w2) isn't there, an empty Counter is created for it. Then, it accesses the next_word w3 within that Counter and increments its count. This builds a map where keys are 2-word prefixes and values are counts of the words that followed those prefixes in the training data.
+
+5. Calculating Probabilities:
+# Normalize counts to get probabilities
+def get_next_word_probabilities(prefix):
+    next_word_counts = model[prefix] # Get the Counter for the given prefix
+    total_count = sum(next_word_counts.values()) # Sum all counts for words following this prefix
+
+    if total_count == 0: # Handle prefixes not found in training data
+        return {}
+
+    # Calculate probability for each next word: count / total_count
+    return {word: count / total_count for word, count in next_word_counts.items()}
+Purpose: This function takes a prefix (a tuple of N-1 words) and calculates the probability of each possible next_word appearing after that prefix, based on the counts learned in the model.
+next_word_counts = model[prefix]: Retrieves the Counter object containing the counts of words that followed the input prefix in the training data. defaultdict ensures an empty Counter is returned if the prefix is unseen.
+total_count = sum(next_word_counts.values()): Sums up all the counts in the Counter. This is the total number of times the given prefix appeared in the training data.
+if total_count == 0:: Checks if the prefix was not found in the training data (total count is 0). If so, it returns an empty dictionary, as no next word predictions are possible.
+return {word: count / total_count ...}: Uses a dictionary comprehension to create a new dictionary. For each word and its count in the next_word_counts Counter, it calculates the probability (count / total_count) and stores it in the new dictionary where the key is the word and the value is the probability.
+
+6. Predicting the Next Word:
+def predict_next_word(text, top_n=3):
+    words = word_tokenize(text.lower()) # Tokenize and lowercase the input text
+    # Extract the prefix: the last n-1 words from the input
+    prefix = tuple(words[-(n-1):])
+
+    next_word_probs = get_next_word_probabilities(prefix) # Get probabilities using the function
+
+    if not next_word_probs: # If no probabilities were calculated (prefix unseen)
+        return ["No prediction available"] # Return a message
+
+    # Sort predictions by probability in descending order and take the top N
+    return sorted(next_word_probs.items(), key=lambda x: x[1], reverse=True)[:top_n]
+Purpose: This function takes a string of text (the user's input phrase), determines the relevant prefix (the last N-1 words), and uses the trained model to predict the most likely next words.
+words = word_tokenize(text.lower()): Processes the input text the same way the training data was: lowercasing and tokenizing.
+prefix = tuple(words[-(n-1):]): Extracts the sequence of words that will serve as the prefix for the prediction. -(n-1): slicing takes the last n-1 elements from the words list. Since n is 3, it takes the last 2 words to form the 2-word prefix tuple.
+next_word_probs = get_next_word_probabilities(prefix): Calls the probability function to get the probability distribution of next words for the extracted prefix.
+if not next_word_probs:: Checks if the get_next_word_probabilities function returned an empty dictionary (meaning the prefix was not encountered in the training data). If so, it returns a "No prediction available" message.
+return sorted(...)[:top_n]: If predictions are available:
+next_word_probs.items(): Gets a list of (word, probability) pairs.
+sorted(..., key=lambda x: x[1], reverse=True): Sorts this list. The key=lambda x: x[1] tells sorted to sort based on the second element of each tuple (the probability). reverse=True sorts in descending order (highest probability first).
+[:top_n]: Takes the first top_n elements from the sorted list (by default, the top 3).
+
+7. Execution:
+user_input = "brown fox jumps"
+predictions = predict_next_word(user_input)
+print(f"Input: '{user_input}'")
+print("Predictions:", predictions)
+user_input = "brown fox jumps": Sets the example input text string provided by the user.
+predictions = predict_next_word(user_input): Calls the prediction function with the user's input. Since n=3, the function will take the last 2 words, ('fox', 'jumps'), as the prefix and look for words that follow this sequence in the training data.
+print(...): Prints the original input text and the returned list of predicted next words with their probabilities.
